@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+venv/
+.venv/
+
+# Generated data (keep the example fixture and directory structure, ignore runtime output)
+data/reports/*.json
+data/drafts/pending/*.json
+data/drafts/approved/*.json
+data/drafts/rejected/*.json
+data/drafts/posted/*.json
+data/drafts/history.jsonl

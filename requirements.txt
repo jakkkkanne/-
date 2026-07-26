@@ -1,0 +1,9 @@
+# Runtime (real Threads API publishing)
+requests>=2.31
+
+# Optional: only needed if you want AnthropicDraftGenerator (auto-used when
+# ANTHROPIC_API_KEY is set). Not required for the template generator or tests.
+anthropic>=0.40
+
+# Dev / test
+pytest>=8.0

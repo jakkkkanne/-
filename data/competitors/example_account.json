@@ -1,0 +1,49 @@
+{
+  "posts": [
+    {
+      "account": "example_marketing_jp",
+      "text": "朝活を続けるコツは、前日の夜に翌朝やることを1つだけ決めておくこと。選択肢を減らすと継続率が上がります。",
+      "posted_at": "2026-07-20T00:05:00+00:00",
+      "likes": 320,
+      "replies": 41,
+      "reposts": 18,
+      "hashtags": ["朝活", "習慣化"]
+    },
+    {
+      "account": "example_marketing_jp",
+      "text": "マーケティング初心者がまず学ぶべきは、顧客の悩みを一言で説明できるようになること。専門用語より共感が刺さります。",
+      "posted_at": "2026-07-21T11:30:00+00:00",
+      "likes": 210,
+      "replies": 30,
+      "reposts": 12,
+      "hashtags": ["マーケティング"]
+    },
+    {
+      "account": "example_marketing_jp",
+      "text": "投稿が伸びない時にまず疑うべきは「切り口」。同じ情報でも、誰の悩みに向けて書くかで反応が大きく変わります。",
+      "posted_at": "2026-07-22T00:15:00+00:00",
+      "likes": 450,
+      "replies": 60,
+      "reposts": 25,
+      "hashtags": ["マーケティング", "SNS運用"]
+    },
+    {
+      "account": "rival_growth_hacks",
+      "text": "SNS運用で一番コスパが良い施策は、過去投稿の中で反応が良かったものをリライトすること。ゼロから作るより速い。",
+      "posted_at": "2026-07-20T12:00:00+00:00",
+      "likes": 180,
+      "replies": 15,
+      "reposts": 9,
+      "hashtags": ["SNS運用", "習慣化"]
+    },
+    {
+      "account": "rival_growth_hacks",
+      "text": "フォロワーが増えない一番の理由は投稿頻度ではなく、プロフィールを見た人が続きを読みたくなる自己紹介になっていないこと。",
+      "posted_at": "2026-07-23T00:30:00+00:00",
+      "likes": 512,
+      "replies": 77,
+      "reposts": 33,
+      "hashtags": ["SNS運用"]
+    }
+  ]
+}
