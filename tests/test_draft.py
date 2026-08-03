@@ -44,17 +44,22 @@ def test_create_drafts_saves_pending_files(tmp_dirs):
 
 def test_detective_generator_produces_requested_count_within_char_limit():
     generator = draft.DetectiveDraftGenerator()
-    drafts = generator.generate(_report(), topic="消えた宝石", count=8)
+    drafts = generator.generate(_report(), topic="ignored", count=12)
 
-    assert len(drafts) == 8
+    assert len(drafts) == 12
     for text in drafts:
         assert len(text) <= config.THREADS_MAX_CHARS
-        assert "消えた宝石" in text
+        assert "#浮気調査" in text and "#探偵" in text
+
+    # Two full cases (6 slots each): each case tells the story in the same
+    # fixed order, so post 0 and post 6 are both "client intro" beats.
+    assert "依頼人紹介" in drafts[0]
+    assert "依頼人紹介" in drafts[6]
+    assert "調査報告" in drafts[5]
 
 
 def test_create_weekly_plan_generates_six_per_day_for_a_week(tmp_dirs):
     drafts = draft.create_weekly_plan(
-        topic="消えた宝石",
         posts_per_day=6,
         days=7,
         start_date=date(2026, 8, 3),

@@ -92,7 +92,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_weekly = sub.add_parser(
         "weekly-plan", help="1日N投稿 x 1週間分の下書きをまとめて生成(既定: 6投稿/日 x 7日、探偵アカウント向け)"
     )
-    p_weekly.add_argument("--topic", default="探偵の事件簿", help="投稿のトピック/テーマ(既定: 探偵の事件簿)")
+    p_weekly.add_argument(
+        "--topic", default="妻の浮気調査(30代男性)", help="下書きに記録するトピック名(既定: 妻の浮気調査(30代男性))"
+    )
     p_weekly.add_argument("--posts-per-day", type=int, default=6, help="1日あたりの投稿数(既定: 6)")
     p_weekly.add_argument("--days", type=int, default=7, help="生成する日数(既定: 7)")
     p_weekly.add_argument("--start-date", default=None, help="開始日 YYYY-MM-DD(既定: 今日、JST)")

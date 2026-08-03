@@ -73,59 +73,67 @@ class TemplateDraftGenerator:
 
 
 class DetectiveDraftGenerator:
-    """Offline generator for a detective/mystery-themed account.
+    """Offline generator for the account's fixed genre: a private detective
+    recounting cases where a man in his 30s, cheated on by his wife, hired
+    the agency to investigate.
 
-    Cycles through a fixed set of content slots (morning quiz, clue, quote,
-    case file, challenge to readers, daily recap) so a week of posts reads
-    like a varied daily series instead of the same shape repeated.
+    Every `len(_SLOTS)` posts form one case, told in order across a single
+    day (client intro -> consultation -> investigation plan -> stakeout ->
+    evidence -> outcome), so with the default 6 posts/day each day reads as
+    a new case in the same recurring format. `topic` is accepted for
+    Protocol/API compatibility and stored as Draft metadata, but the story
+    itself is fixed -- that's the point of "unifying" the genre.
     """
 
     name = "detective"
 
+    _CLIENT_AGES = [32, 34, 36, 38, 33, 37, 39]
+
     _SLOTS = [
         (
-            "【朝の推理クイズ #{n}】\n"
-            "{topic}にまつわるミステリー、あなたなら解けますか?\n"
-            "手がかりはコメント欄で少しずつ公開します。"
+            "【依頼人紹介 #{n}】\n"
+            "今回の依頼人は{age}歳、会社員の男性。\n"
+            "「妻の様子が最近おかしい」と、当探偵事務所を訪ねてこられました。"
         ),
         (
-            "捜査ノートより #{n}\n"
-            "{topic}を調べていて気づいた小さな違和感。\n"
-            "見逃さないことが真相への第一歩です。"
+            "相談内容 #{n}\n"
+            "「スマホを肌身離さず持つようになった」「休日の外出が増えた」。\n"
+            "小さな違和感の積み重ねが、依頼のきっかけでした。"
         ),
         (
-            "探偵の心得 #{n}\n"
-            "「事実は一つ、真実はいくつもある」\n"
-            "{topic}を追ううえで、この言葉を忘れないようにしています。"
+            "調査方針 #{n}\n"
+            "依頼人と相談のうえ、まずは奥さまの行動パターンを記録することに。\n"
+            "尾行・張り込みの準備を進めます。"
         ),
         (
-            "事件簿ファイル #{n}\n"
-            "今日扱った案件は{topic}に関するもの。\n"
-            "詳しい顛末はまた明日、続きをお楽しみに。"
+            "調査開始 #{n}\n"
+            "指定した日、奥さまの後を追います。\n"
+            "向かった先は、いつもと違う駅前のカフェでした。"
         ),
         (
-            "読者への挑戦状 #{n}\n"
-            "{topic}にまつわるこの謎、あなたなら何分で解けますか?\n"
-            "答えが分かった方はコメントで教えてください。"
+            "証拠の記録 #{n}\n"
+            "奥さまが見知らぬ男性と合流する瞬間を記録。\n"
+            "日時・場所を添えた写真は、揺るぎない証拠になります。"
         ),
         (
-            "今日の捜査報告 #{n}\n"
-            "{topic}についての調査は一区切り。\n"
-            "明日もまた新しい事件が待っています。"
+            "調査報告 #{n}\n"
+            "証拠一式を依頼人にお渡ししました。\n"
+            "そこから先を決めるのは依頼人自身ですが、事実を知る権利は誰にでもあります。"
         ),
     ]
 
-    _DEFAULT_HASHTAGS = ["謎解き", "ミステリー"]
+    _DEFAULT_HASHTAGS = ["浮気調査", "探偵"]
 
     def generate(self, report: ResearchReport, topic: str, count: int) -> list[str]:
         hashtags = list(dict.fromkeys(
-            [h for h, _ in report.top_hashtags[:2]] + self._DEFAULT_HASHTAGS
+            [h for h, _ in report.top_hashtags[:1]] + self._DEFAULT_HASHTAGS
         ))[:3]
         drafts = []
         for i in range(count):
             slot = self._SLOTS[i % len(self._SLOTS)]
             case_no = i // len(self._SLOTS) + 1
-            text = slot.format(topic=topic, n=case_no)
+            age = self._CLIENT_AGES[(case_no - 1) % len(self._CLIENT_AGES)]
+            text = slot.format(age=age, n=case_no)
             if hashtags:
                 text += "\n\n" + " ".join(f"#{h}" for h in hashtags)
             drafts.append(_truncate(text, config.THREADS_MAX_CHARS))
@@ -213,8 +221,9 @@ DEFAULT_DAILY_TIMES = ["07:00", "10:00", "13:00", "16:00", "19:00", "22:00"]
 
 
 def get_default_weekly_generator() -> DraftGenerator:
-    if config.ANTHROPIC_API_KEY:
-        return AnthropicDraftGenerator()
+    # Always the fixed-genre generator: the whole point of weekly-plan is a
+    # single, unified account genre, so (unlike `draft`) it does not switch
+    # to the generic AnthropicDraftGenerator even when an API key is set.
     return DetectiveDraftGenerator()
 
 
@@ -224,7 +233,7 @@ def _parse_hhmm(value: str) -> dt_time:
 
 
 def create_weekly_plan(
-    topic: str = "探偵の事件簿",
+    topic: str = "妻の浮気調査(30代男性)",
     posts_per_day: int = 6,
     days: int = 7,
     start_date: date | None = None,
