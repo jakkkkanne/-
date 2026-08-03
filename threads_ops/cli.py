@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 
 from . import approval, config, draft, publish, research
 
@@ -36,6 +37,21 @@ def cmd_draft(args: argparse.Namespace) -> None:
     print(f"{len(drafts)} 件の下書きを作成しました (承認待ち):")
     for d in drafts:
         print(f"  - {d.id}")
+
+
+def cmd_weekly_plan(args: argparse.Namespace) -> None:
+    config.ensure_dirs()
+    start_date = date.fromisoformat(args.start_date) if args.start_date else None
+    drafts = draft.create_weekly_plan(
+        topic=args.topic,
+        posts_per_day=args.posts_per_day,
+        days=args.days,
+        start_date=start_date,
+    )
+    print(f"{len(drafts)} 件の下書きを作成しました ({args.days}日 x 1日{args.posts_per_day}投稿、承認待ち):")
+    for d in drafts:
+        print(f"  - {d.id}  予定: {d.scheduled_at}")
+    print("\n`review` で内容を確認・承認し、`publish` を毎日実行すると予定時刻が来たものだけ投稿されます。")
 
 
 def cmd_review(args: argparse.Namespace) -> None:
@@ -72,6 +88,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_draft.add_argument("--topic", required=True, help="投稿のトピック/テーマ")
     p_draft.add_argument("--count", type=int, default=3, help="生成する下書きの数")
     p_draft.set_defaults(func=cmd_draft)
+
+    p_weekly = sub.add_parser(
+        "weekly-plan", help="1日N投稿 x 1週間分の下書きをまとめて生成(既定: 6投稿/日 x 7日、探偵アカウント向け)"
+    )
+    p_weekly.add_argument("--topic", default="探偵の事件簿", help="投稿のトピック/テーマ(既定: 探偵の事件簿)")
+    p_weekly.add_argument("--posts-per-day", type=int, default=6, help="1日あたりの投稿数(既定: 6)")
+    p_weekly.add_argument("--days", type=int, default=7, help="生成する日数(既定: 7)")
+    p_weekly.add_argument("--start-date", default=None, help="開始日 YYYY-MM-DD(既定: 今日、JST)")
+    p_weekly.set_defaults(func=cmd_weekly_plan)
 
     sub.add_parser("review", help="下書きをCLIで確認し承認/却下").set_defaults(func=cmd_review)
     sub.add_parser("publish", help="承認済みの下書きを投稿(既定はモック)").set_defaults(func=cmd_publish)

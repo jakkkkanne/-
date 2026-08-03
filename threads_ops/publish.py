@@ -10,6 +10,7 @@ available, but it is opt-in (THREADS_OPS_PUBLISHER=real).
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Protocol
 
 from . import config, storage
@@ -106,15 +107,28 @@ def publish_approved(
     approved_dir=None,
     posted_dir=None,
     history_file=None,
+    now: datetime | None = None,
 ) -> list[PublishResult]:
+    """Publish every approved draft that is due.
+
+    Drafts with a `scheduled_at` in the future are left untouched in
+    approved/ so a later run (e.g. a daily cron) picks them up once their
+    time comes -- this is what lets a week's worth of drafts, approved all
+    at once, actually go out 6-a-day instead of all at once.
+    """
     publisher = publisher or get_default_publisher()
     approved_dir = approved_dir or config.APPROVED_DIR
     posted_dir = posted_dir or config.POSTED_DIR
     history_file = history_file or config.HISTORY_FILE
+    now = now or datetime.now(timezone.utc)
 
     results = []
     for path in storage.list_json_files(approved_dir):
         draft = Draft.from_dict(storage.read_json(path))
+
+        if draft.scheduled_at and datetime.fromisoformat(draft.scheduled_at) > now:
+            continue  # not due yet; stays in approved/ for a later publish run
+
         result = publisher.publish(draft)
         results.append(result)
 

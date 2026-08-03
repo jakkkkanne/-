@@ -64,7 +64,11 @@ def interactive_review(
         return counts
 
     for idx, draft in enumerate(drafts, start=1):
-        print_func(f"\n--- 下書き {idx}/{len(drafts)} (topic: {draft.topic}, generator: {draft.generator}) ---")
+        header = f"\n--- 下書き {idx}/{len(drafts)} (topic: {draft.topic}, generator: {draft.generator}"
+        if draft.scheduled_at:
+            header += f", 予定: {draft.scheduled_at}"
+        header += ") ---"
+        print_func(header)
         print_func(draft.text)
         print_func(f"({len(draft.text)} 文字)")
 

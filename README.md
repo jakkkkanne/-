@@ -63,6 +63,28 @@ python -m threads_ops draft --topic "朝活" --count 3
 `ANTHROPIC_API_KEY` が設定されていれば Claude API で自然な文章を生成し、未設定なら
 オフラインのテンプレート生成にフォールバックします。
 
+### 2.5 1週間分をまとめて生成(探偵アカウント向け)
+
+```bash
+python -m threads_ops weekly-plan
+```
+
+1日6投稿 x 7日分(既定)の下書きを一括生成し、`data/drafts/pending/` に保存します。
+既定のトピックは「探偵の事件簿」で、オフラインの `DetectiveDraftGenerator` が
+朝の推理クイズ・手がかり・名探偵の格言・事件簿・読者への挑戦状・捜査報告、の
+6種類のフォーマットを日替わりでローテーションします(`ANTHROPIC_API_KEY` が
+設定されていれば Claude API を使った生成にフォールバックします)。
+
+各下書きには `scheduled_at`(JST の投稿予定時刻)が付き、`publish` は予定時刻を
+過ぎたものだけを投稿します。承認は前倒しでまとめて行っても、実際の投稿は
+1日6件ずつ小出しになる、という運用が可能です(`publish` を毎日 cron 等で実行してください)。
+
+オプション:
+
+```bash
+python -m threads_ops weekly-plan --topic "消えた宝石" --posts-per-day 6 --days 7 --start-date 2026-08-04
+```
+
 ### 3. 承認(CLI)
 
 ```bash
@@ -105,7 +127,7 @@ threads_ops/       パイプライン本体
   config.py         環境変数ベースの設定
   models.py         CompetitorPost / ResearchReport / Draft
   research.py        競合データ分析
-  draft.py            下書き生成 (テンプレート / Anthropic)
+  draft.py            下書き生成 (テンプレート / 探偵アカウント用 / Anthropic / 週次プラン)
   approval.py       CLI 承認フロー
   publish.py         投稿 (Mock / 実 API)
   cli.py            コマンド群

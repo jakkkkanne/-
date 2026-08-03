@@ -69,6 +69,7 @@ class Draft:
     source_report: str | None = None
     generator: str = "template"
     note: str | None = None
+    scheduled_at: str | None = None  # ISO-8601; when set, publish holds the draft until this time
 
     def to_dict(self) -> dict:
         return asdict(self)

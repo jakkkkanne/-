@@ -1,3 +1,5 @@
+from datetime import date
+
 from threads_ops import config, draft
 from threads_ops.models import ResearchReport
 
@@ -38,3 +40,51 @@ def test_create_drafts_saves_pending_files(tmp_dirs):
     for d in drafts:
         assert d.status == "pending"
         assert d.source_report == report.id
+
+
+def test_detective_generator_produces_requested_count_within_char_limit():
+    generator = draft.DetectiveDraftGenerator()
+    drafts = generator.generate(_report(), topic="消えた宝石", count=8)
+
+    assert len(drafts) == 8
+    for text in drafts:
+        assert len(text) <= config.THREADS_MAX_CHARS
+        assert "消えた宝石" in text
+
+
+def test_create_weekly_plan_generates_six_per_day_for_a_week(tmp_dirs):
+    drafts = draft.create_weekly_plan(
+        topic="消えた宝石",
+        posts_per_day=6,
+        days=7,
+        start_date=date(2026, 8, 3),
+        generator=draft.DetectiveDraftGenerator(),
+        pending_dir=tmp_dirs["pending"],
+    )
+
+    assert len(drafts) == 42
+    saved = list(tmp_dirs["pending"].glob("*.json"))
+    assert len(saved) == 42
+    for d in drafts:
+        assert d.status == "pending"
+        assert d.scheduled_at is not None
+
+    # 6 posts/day spread across 7 consecutive days, each at the same times.
+    days_seen = {d.scheduled_at[:10] for d in drafts}
+    assert days_seen == {f"2026-08-{day:02d}" for day in range(3, 10)}
+    first_day_times = sorted(d.scheduled_at[11:16] for d in drafts if d.scheduled_at.startswith("2026-08-03"))
+    assert first_day_times == draft.DEFAULT_DAILY_TIMES
+
+
+def test_create_weekly_plan_rejects_too_few_times(tmp_dirs):
+    try:
+        draft.create_weekly_plan(
+            posts_per_day=6,
+            days=1,
+            times=["07:00"],
+            generator=draft.DetectiveDraftGenerator(),
+            pending_dir=tmp_dirs["pending"],
+        )
+        assert False, "expected ValueError"
+    except ValueError:
+        pass
