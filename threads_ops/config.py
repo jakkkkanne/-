@@ -18,6 +18,11 @@ REJECTED_DIR = DRAFTS_DIR / "rejected"
 POSTED_DIR = DRAFTS_DIR / "posted"
 HISTORY_FILE = DRAFTS_DIR / "history.jsonl"
 
+# Company departments (built on top of the research/draft/review/publish pipeline)
+MARKETING_DIR = DATA_DIR / "marketing"
+STRATEGY_DIR = DATA_DIR / "strategy"
+SECRETARY_DIR = DATA_DIR / "secretary"
+
 # "mock" never calls the real Threads API. "real" requires THREADS_ACCESS_TOKEN
 # and THREADS_USER_ID and performs actual publish calls.
 PUBLISHER_MODE = os.environ.get("THREADS_OPS_PUBLISHER", "mock")
@@ -33,5 +38,15 @@ THREADS_MAX_CHARS = 500
 
 
 def ensure_dirs() -> None:
-    for d in (COMPETITORS_DIR, REPORTS_DIR, PENDING_DIR, APPROVED_DIR, REJECTED_DIR, POSTED_DIR):
+    for d in (
+        COMPETITORS_DIR,
+        REPORTS_DIR,
+        PENDING_DIR,
+        APPROVED_DIR,
+        REJECTED_DIR,
+        POSTED_DIR,
+        MARKETING_DIR,
+        STRATEGY_DIR,
+        SECRETARY_DIR,
+    ):
         d.mkdir(parents=True, exist_ok=True)

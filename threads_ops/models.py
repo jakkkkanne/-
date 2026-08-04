@@ -60,6 +60,71 @@ class ResearchReport:
 
 
 @dataclass
+class MarketingPlan:
+    """Marketing department output: how to package the research findings."""
+
+    id: str
+    generated_at: str
+    source_report: str
+    target_keywords: list[str]
+    hashtag_strategy: list[str]
+    best_hours_utc: list[list]
+    tone: str
+    posting_cadence_per_week: int
+    growth_tactics: list[str]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "MarketingPlan":
+        return cls(**data)
+
+
+@dataclass
+class StrategyPlan:
+    """Strategy department output: what to post about, how often, and why."""
+
+    id: str
+    generated_at: str
+    source_report: str
+    source_marketing_plan: str
+    content_pillars: list[str]
+    priority_topics: list[str]
+    weekly_post_target: int
+    kpi_targets: dict
+    notes: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "StrategyPlan":
+        return cls(**data)
+
+
+@dataclass
+class CompanyReport:
+    """Secretary department output: a run summary across all departments."""
+
+    id: str
+    generated_at: str
+    research_report_id: str
+    marketing_plan_id: str
+    strategy_plan_id: str
+    department_summaries: dict[str, str]
+    draft_ids: list[str]
+    next_actions: list[str]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "CompanyReport":
+        return cls(**data)
+
+
+@dataclass
 class Draft:
     id: str
     topic: str
