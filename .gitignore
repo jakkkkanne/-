@@ -12,3 +12,7 @@ data/drafts/approved/*.json
 data/drafts/rejected/*.json
 data/drafts/posted/*.json
 data/drafts/history.jsonl
+data/marketing/*.json
+data/strategy/*.json
+data/finance/*.json
+data/secretary/*.json
