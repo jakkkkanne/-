@@ -22,6 +22,16 @@ HISTORY_FILE = DRAFTS_DIR / "history.jsonl"
 MARKETING_DIR = DATA_DIR / "marketing"
 STRATEGY_DIR = DATA_DIR / "strategy"
 SECRETARY_DIR = DATA_DIR / "secretary"
+FINANCE_DIR = DATA_DIR / "finance"
+
+# Finance department: monetization assumptions used to project revenue from
+# engagement/follower-growth KPI targets. These are rough placeholders --
+# set them via .env to match your actual monetization model (affiliate
+# payouts, lead value, ad revenue share, etc).
+REVENUE_PER_ENGAGEMENT_POINT = float(os.environ.get("THREADS_OPS_REVENUE_PER_ENGAGEMENT", "3.0"))
+REVENUE_PER_NEW_FOLLOWER = float(os.environ.get("THREADS_OPS_REVENUE_PER_FOLLOWER", "20.0"))
+CURRENT_FOLLOWER_COUNT = int(os.environ.get("THREADS_OPS_FOLLOWER_COUNT", "0"))
+COST_PER_DRAFT_GENERATED = float(os.environ.get("THREADS_OPS_COST_PER_DRAFT", "0.0"))
 
 # "mock" never calls the real Threads API. "real" requires THREADS_ACCESS_TOKEN
 # and THREADS_USER_ID and performs actual publish calls.
@@ -48,5 +58,6 @@ def ensure_dirs() -> None:
         MARKETING_DIR,
         STRATEGY_DIR,
         SECRETARY_DIR,
+        FINANCE_DIR,
     ):
         d.mkdir(parents=True, exist_ok=True)

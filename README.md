@@ -1,17 +1,18 @@
 # Threads 運用会社 (threads_ops)
 
 Threads (Meta) の運用を、複数SNS展開(X・Threads・Instagram・note)を見据えた
-「運用会社」の第一弾として自動化するパイプラインです。会社は4部門で構成されます。
+「運用会社」の第一弾として自動化するパイプラインです。会社は5部門で構成されます。
 
 | 部門 | 役割 | 対応モジュール |
 | --- | --- | --- |
 | リサーチ部門 | 競合投稿を分析しレポート化 | `research.py` |
 | マーケティング部門 | レポートから投稿トーン・頻度・ハッシュタグ戦略を立案 | `marketing.py` |
 | 戦略部門 | コンテンツの柱・優先トピック・KPI目標を決定 | `strategy.py` |
-| 秘書部門 | 上記3部門を統括し、下書き生成まで一括実行してレポートを作成 | `secretary.py` |
+| 収益管理部門 | KPI目標と投稿実績から週次の見込み利益を試算 | `finance.py` |
+| 秘書部門 | 上記4部門を統括し、下書き生成まで一括実行してレポートを作成(定期自動実行も可) | `secretary.py` |
 
 ```
-リサーチ(競合分析) → マーケティング(戦術立案) → 戦略(トピック決定)
+リサーチ(競合分析) → マーケティング(戦術立案) → 戦略(トピック決定) → 収益管理(利益試算)
   → 下書き生成 → 人による承認(CLI) → 投稿
 ```
 
@@ -71,7 +72,8 @@ python -m threads_ops draft --topic "朝活" --count 3
 
 最新のリサーチレポートをもとに下書きを生成し、`data/drafts/pending/` に保存します。
 `ANTHROPIC_API_KEY` が設定されていれば Claude API で自然な文章を生成し、未設定なら
-オフラインのテンプレート生成にフォールバックします。
+オフラインのテンプレート生成にフォールバックします。マーケティングプランが保存済みなら
+自動的に読み込み、トーン(カジュアル/丁寧)・成長施策・推奨ハッシュタグを文面に反映します。
 
 ### 3. 承認(CLI)
 
@@ -124,17 +126,47 @@ python -m threads_ops strategy
 `StrategyPlan` を生成し `data/strategy/` に保存します。優先トピックは上位ハッシュタグ
 (なければキーワード)から選ばれます。
 
+### 収益管理部門
+
+```bash
+python -m threads_ops finance
+```
+
+最新の戦略プラン(KPI目標)と `data/drafts/history.jsonl` の投稿実績から、
+週次の見込みエンゲージメント収益・フォロワー収益・下書き生成コスト・見込み利益を試算し
+`RevenueReport` として `data/finance/` に保存します。単価は `.env` の
+`THREADS_OPS_REVENUE_PER_ENGAGEMENT` / `THREADS_OPS_REVENUE_PER_FOLLOWER` /
+`THREADS_OPS_FOLLOWER_COUNT` / `THREADS_OPS_COST_PER_DRAFT` で調整してください。
+**実測の収益ではなく、あくまで設定した単価に基づく試算です。**
+
 ### 秘書部門(会社を一括運用)
 
 ```bash
 python -m threads_ops secretary --topics 3 --count 2
 ```
 
-リサーチ → マーケティング → 戦略 の3部門を順に実行し、戦略部門が決めた優先トピック
-(既定で上位3件)ごとに下書きを生成します。実行結果は各部門のサマリーと
+リサーチ → マーケティング → 戦略 → 収益管理 の4部門を順に実行し、戦略部門が決めた
+優先トピック(既定で上位3件)ごとに下書きを生成します。実行結果は各部門のサマリーと
 次にやるべきアクション(`review` → `publish`)をまとめた `CompanyReport` として
 `data/secretary/` に保存されます。秘書部門は下書きを作るところまでで止まり、
 承認・投稿は必ず人が `review` / `publish` を実行します。
+
+#### 定期自動実行(ループモード)
+
+```bash
+python -m threads_ops secretary --loop --interval-hours 24 --max-iterations 3
+```
+
+`--loop` を付けると、上記のサイクルを `--interval-hours` おきに繰り返します
+(`--max-iterations` を省略すると Ctrl+C で止めるまで無期限に実行します)。
+ループ中も下書き作成までしか行わないため、投稿には毎回人が `review` / `publish`
+を実行する必要があります。フォアグラウンドプロセスとして動かし続けたくない場合は、
+cron や systemd timer から都度 `python -m threads_ops secretary` を呼び出す方法もあります:
+
+```cron
+# 毎日 9:00 に秘書部門のサイクルを1回実行(下書きが data/drafts/pending/ に溜まる)
+0 9 * * * cd /path/to/repo && .venv/bin/python -m threads_ops secretary --topics 3 --count 2 >> secretary.log 2>&1
+```
 
 ## テスト
 
@@ -147,12 +179,13 @@ pytest -q
 ```
 threads_ops/       パイプライン本体
   config.py         環境変数ベースの設定
-  models.py         CompetitorPost / ResearchReport / MarketingPlan / StrategyPlan / CompanyReport / Draft
+  models.py         CompetitorPost / ResearchReport / MarketingPlan / StrategyPlan / RevenueReport / CompanyReport / Draft
   research.py        [リサーチ部門] 競合データ分析
   marketing.py        [マーケティング部門] トーン・頻度・ハッシュタグ戦略の立案
   strategy.py          [戦略部門] コンテンツの柱・優先トピック・KPI目標の決定
-  secretary.py          [秘書部門] 各部門を統括して一括実行し会社レポートを作成
-  draft.py            下書き生成 (テンプレート / Anthropic)
+  finance.py            [収益管理部門] KPI目標と投稿実績から見込み利益を試算
+  secretary.py            [秘書部門] 各部門を統括して一括実行(定期ループ対応)し会社レポートを作成
+  draft.py            下書き生成 (テンプレート / Anthropic、マーケティングプランのトーンを反映)
   approval.py       CLI 承認フロー
   publish.py         投稿 (Mock / 実 API)
   cli.py            コマンド群
@@ -161,6 +194,7 @@ data/
   reports/          生成されたリサーチレポート
   marketing/        マーケティングプラン
   strategy/         戦略プラン
+  finance/          収益レポート(見込み利益の試算)
   secretary/        秘書部門の会社運用レポート
   drafts/
     pending/        承認待ち
@@ -176,3 +210,9 @@ data/
   必要なデータは手動で `data/competitors/` に投入してください。
 - 既定の投稿処理はモックです。実際に Threads へ投稿するには Meta 側のアプリ登録・
   アクセストークン発行が必要です。
+- 収益管理部門(`finance.py`)が出す数値はすべて `.env` で設定した単価に基づく
+  試算(見込み)であり、実際の広告収益・アフィリエイト成果などを計測しているわけ
+  ではありません。実際の収益データと連携する仕組みは未実装です。
+- `secretary --loop` はフォアグラウンドで動き続けるプロセスです。ターミナルを
+  閉じると停止するため、常時稼働させたい場合は cron / systemd timer / プロセス
+  マネージャ(systemd, supervisor 等)と組み合わせてください。

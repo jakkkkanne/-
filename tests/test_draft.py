@@ -1,5 +1,5 @@
 from threads_ops import config, draft
-from threads_ops.models import ResearchReport
+from threads_ops.models import MarketingPlan, ResearchReport
 
 
 def _report():
@@ -13,6 +13,20 @@ def _report():
         best_hours_utc=[[9, 120.0]],
         avg_post_length=80.0,
         top_posts=[],
+    )
+
+
+def _marketing_plan(tone="詳しく丁寧"):
+    return MarketingPlan(
+        id="marketing_test",
+        generated_at="2026-07-26T00:00:00+00:00",
+        source_report="report_test",
+        target_keywords=["マーケティング"],
+        hashtag_strategy=["#マーケティング", "#sns運用"],
+        best_hours_utc=[[9, 120.0]],
+        tone=tone,
+        posting_cadence_per_week=3,
+        growth_tactics=["リプライ欄で会話を続ける", "保存されやすいリスト形式にする"],
     )
 
 
@@ -38,3 +52,49 @@ def test_create_drafts_saves_pending_files(tmp_dirs):
     for d in drafts:
         assert d.status == "pending"
         assert d.source_report == report.id
+
+
+def test_template_generator_uses_polite_tone_from_marketing_plan():
+    generator = draft.TemplateDraftGenerator()
+    drafts = generator.generate(_report(), topic="朝活", count=2, marketing_plan=_marketing_plan("詳しく丁寧"))
+
+    for text in drafts:
+        assert "ご紹介" in text or "ぜひ" in text or "皆様" in text or "ご案内" in text
+
+
+def test_template_generator_stays_casual_without_polite_tone():
+    generator = draft.TemplateDraftGenerator()
+    drafts = generator.generate(_report(), topic="朝活", count=2, marketing_plan=_marketing_plan("カジュアルで簡潔"))
+
+    for text in drafts:
+        assert "皆様" not in text
+
+
+def test_template_generator_includes_growth_tactic_when_marketing_plan_given():
+    generator = draft.TemplateDraftGenerator()
+    plan = _marketing_plan()
+    drafts = generator.generate(_report(), topic="朝活", count=1, marketing_plan=plan)
+
+    assert "施策: " + plan.growth_tactics[0] in drafts[0]
+
+
+def test_template_generator_uses_marketing_plan_hashtags():
+    generator = draft.TemplateDraftGenerator()
+    plan = _marketing_plan()
+    drafts = generator.generate(_report(), topic="朝活", count=1, marketing_plan=plan)
+
+    assert "#sns運用" in drafts[0]
+
+
+def test_create_drafts_passes_marketing_plan_through(tmp_dirs):
+    report = _report()
+    plan = _marketing_plan()
+    drafts = draft.create_drafts(
+        report,
+        topic="朝活",
+        count=1,
+        generator=draft.TemplateDraftGenerator(),
+        pending_dir=tmp_dirs["pending"],
+        marketing_plan=plan,
+    )
+    assert "#sns運用" in drafts[0].text

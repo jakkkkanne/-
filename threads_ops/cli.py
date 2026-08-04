@@ -10,7 +10,9 @@ Company departments (built on top of the pipeline above):
 
     python -m threads_ops marketing
     python -m threads_ops strategy
+    python -m threads_ops finance
     python -m threads_ops secretary --topics 3 --count 2
+    python -m threads_ops secretary --loop --interval-hours 24 --max-iterations 3
 """
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import approval, config, draft, marketing, publish, research, secretary, strategy
+from . import approval, config, draft, finance, marketing, publish, research, secretary, strategy
 
 
 def cmd_research(args: argparse.Namespace) -> None:
@@ -38,7 +40,8 @@ def cmd_draft(args: argparse.Namespace) -> None:
     if report is None:
         print("リサーチレポートがありません。先に `research` を実行してください。", file=sys.stderr)
         raise SystemExit(1)
-    drafts = draft.create_drafts(report, topic=args.topic, count=args.count)
+    plan = marketing.latest_marketing_plan()
+    drafts = draft.create_drafts(report, topic=args.topic, count=args.count, marketing_plan=plan)
     print(f"{len(drafts)} 件の下書きを作成しました (承認待ち):")
     for d in drafts:
         print(f"  - {d.id}")
@@ -101,16 +104,56 @@ def cmd_strategy(args: argparse.Namespace) -> None:
     print(strategy_plan.notes)
 
 
-def cmd_secretary(args: argparse.Namespace) -> None:
+def cmd_finance(args: argparse.Namespace) -> None:
     config.ensure_dirs()
-    report, path = secretary.run_company_cycle(topic_count=args.topics, drafts_per_topic=args.count)
-    print(f"会社運用レポート保存先: {path}")
+    strategy_plan = strategy.latest_strategy_plan()
+    if strategy_plan is None:
+        print("戦略プランがありません。先に `strategy` を実行してください。", file=sys.stderr)
+        raise SystemExit(1)
+    report, path = finance.run_finance(strategy_plan)
+    print(f"収益レポート保存先: {path}")
+    print(f"週次目標投稿数: {report.weekly_post_target} / 累計投稿数: {report.posts_published_total}")
+    print(f"見込みエンゲージメント収益: {report.estimated_weekly_engagement_value}")
+    print(f"見込みフォロワー収益: {report.estimated_weekly_follower_value}")
+    print(f"見込み生成コスト: {report.estimated_weekly_generation_cost}")
+    print(f"見込み週次利益: {report.estimated_weekly_profit}")
+    print(report.notes)
+
+
+def _print_company_report(report) -> None:
     for dept, summary in report.department_summaries.items():
         print(f"[{dept}] {summary}")
     print("作成した下書きID:", ", ".join(report.draft_ids) if report.draft_ids else "なし")
     print("次のアクション:")
     for action in report.next_actions:
         print(f"  - {action}")
+
+
+def cmd_secretary(args: argparse.Namespace) -> None:
+    config.ensure_dirs()
+
+    if not args.loop:
+        report, path = secretary.run_company_cycle(topic_count=args.topics, drafts_per_topic=args.count)
+        print(f"会社運用レポート保存先: {path}")
+        _print_company_report(report)
+        return
+
+    def on_cycle(report) -> None:
+        print(f"\n=== サイクル完了: {report.id} ({report.generated_at}) ===")
+        _print_company_report(report)
+
+    interval_seconds = args.interval_hours * 3600
+    print(
+        f"秘書部門ループを開始します(間隔: {args.interval_hours}時間、"
+        f"{'無期限' if args.max_iterations is None else f'{args.max_iterations}回'})。Ctrl+Cで停止できます。"
+    )
+    secretary.run_company_loop(
+        interval_seconds=interval_seconds,
+        topic_count=args.topics,
+        drafts_per_topic=args.count,
+        max_iterations=args.max_iterations,
+        on_cycle=on_cycle,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -138,13 +181,21 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("strategy", help="[戦略部門] レポート+マーケティングプランから戦略プランを作成").set_defaults(
         func=cmd_strategy
     )
+    sub.add_parser("finance", help="[収益管理部門] 戦略プランと投稿履歴から週次の見込み利益を試算").set_defaults(
+        func=cmd_finance
+    )
 
     p_secretary = sub.add_parser(
         "secretary",
-        help="[秘書部門] research -> marketing -> strategy -> draft を統括して一括実行",
+        help="[秘書部門] research -> marketing -> strategy -> finance -> draft を統括して一括実行",
     )
     p_secretary.add_argument("--topics", type=int, default=3, help="下書きを作成する優先トピック数")
     p_secretary.add_argument("--count", type=int, default=2, help="トピックごとに生成する下書きの数")
+    p_secretary.add_argument("--loop", action="store_true", help="一定間隔で繰り返し実行する(定期自動運用)")
+    p_secretary.add_argument("--interval-hours", type=float, default=24.0, help="--loop 時の実行間隔(時間)")
+    p_secretary.add_argument(
+        "--max-iterations", type=int, default=None, help="--loop 時の最大実行回数(省略時は無期限)"
+    )
     p_secretary.set_defaults(func=cmd_secretary)
 
     return parser

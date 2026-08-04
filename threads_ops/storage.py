@@ -26,6 +26,13 @@ def append_jsonl(path: Path, data: dict) -> None:
         f.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 
+def read_jsonl(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return [json.loads(line) for line in lines if line.strip()]
+
+
 def list_json_files(directory: Path) -> list[Path]:
     if not directory.exists():
         return []

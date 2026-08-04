@@ -104,6 +104,35 @@ class StrategyPlan:
 
 
 @dataclass
+class RevenueReport:
+    """Finance department output: a weekly profit projection.
+
+    All monetary figures are estimates derived from the strategy
+    department's KPI targets and configurable monetization rates (see
+    config.py) -- not measured revenue. Treat this as a planning aid, not
+    accounting.
+    """
+
+    id: str
+    generated_at: str
+    source_strategy_plan: str
+    posts_published_total: int
+    weekly_post_target: int
+    estimated_weekly_engagement_value: float
+    estimated_weekly_follower_value: float
+    estimated_weekly_generation_cost: float
+    estimated_weekly_profit: float
+    notes: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RevenueReport":
+        return cls(**data)
+
+
+@dataclass
 class CompanyReport:
     """Secretary department output: a run summary across all departments."""
 
@@ -112,6 +141,7 @@ class CompanyReport:
     research_report_id: str
     marketing_plan_id: str
     strategy_plan_id: str
+    finance_report_id: str
     department_summaries: dict[str, str]
     draft_ids: list[str]
     next_actions: list[str]

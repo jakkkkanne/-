@@ -46,6 +46,11 @@ def test_publish_approved_moves_to_posted_and_records_history(tmp_dirs):
     history_lines = tmp_dirs["history"].read_text(encoding="utf-8").strip().splitlines()
     assert len(history_lines) == 1
 
+    entries = storage.read_jsonl(tmp_dirs["history"])
+    assert len(entries) == 1
+    assert entries[0]["draft_id"] == d.id
+    assert entries[0]["success"] is True
+
 
 def test_real_publisher_requires_credentials(monkeypatch):
     monkeypatch.setattr("threads_ops.config.THREADS_ACCESS_TOKEN", None)

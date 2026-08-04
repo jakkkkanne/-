@@ -16,6 +16,7 @@ def tmp_dirs(tmp_path, monkeypatch):
     marketing = tmp_path / "marketing"
     strategy = tmp_path / "strategy"
     secretary = tmp_path / "secretary"
+    finance = tmp_path / "finance"
 
     monkeypatch.setattr(config, "COMPETITORS_DIR", competitors)
     monkeypatch.setattr(config, "REPORTS_DIR", reports)
@@ -27,6 +28,7 @@ def tmp_dirs(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "MARKETING_DIR", marketing)
     monkeypatch.setattr(config, "STRATEGY_DIR", strategy)
     monkeypatch.setattr(config, "SECRETARY_DIR", secretary)
+    monkeypatch.setattr(config, "FINANCE_DIR", finance)
     config.ensure_dirs()
 
     return {
@@ -40,4 +42,5 @@ def tmp_dirs(tmp_path, monkeypatch):
         "marketing": marketing,
         "strategy": strategy,
         "secretary": secretary,
+        "finance": finance,
     }
