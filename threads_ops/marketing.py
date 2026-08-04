@@ -16,11 +16,16 @@ _GROWTH_TACTICS = [
     "リプライ欄で会話を続けてエンゲージメントを積み増す",
     "保存されやすい要約・リスト形式の投稿を増やす",
     "競合の高反応投稿のフォーマットを参考にする",
+    "「解決法」投稿には楽天アフィリエイト商品リンクを添えて収益に繋げる",
 ]
 
 
 def build_marketing_plan(report: ResearchReport) -> MarketingPlan:
-    if report.post_count >= 20:
+    if config.WEEKLY_POST_TARGET_OVERRIDE is not None:
+        # An explicit business decision (e.g. "42 posts/week") wins over the
+        # post_count-based heuristic below.
+        cadence = config.WEEKLY_POST_TARGET_OVERRIDE
+    elif report.post_count >= 20:
         cadence = 7
     elif report.post_count > 0:
         cadence = 3

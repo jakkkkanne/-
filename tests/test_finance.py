@@ -25,6 +25,9 @@ def test_build_revenue_report_computes_projection(monkeypatch):
     monkeypatch.setattr(config, "REVENUE_PER_NEW_FOLLOWER", 20.0)
     monkeypatch.setattr(config, "CURRENT_FOLLOWER_COUNT", 1000)
     monkeypatch.setattr(config, "COST_PER_DRAFT_GENERATED", 1.0)
+    monkeypatch.setattr(config, "ESTIMATED_WEEKLY_AFFILIATE_CLICKS", 100.0)
+    monkeypatch.setattr(config, "RAKUTEN_AVG_CONVERSION_RATE", 0.03)
+    monkeypatch.setattr(config, "RAKUTEN_AVG_COMMISSION_PER_SALE", 300.0)
 
     plan = _strategy_plan(weekly_post_target=3, target_avg_engagement=100.0, target_follower_growth_pct=5.0)
     report = finance.build_revenue_report(plan, history_entries=[])
@@ -33,8 +36,9 @@ def test_build_revenue_report_computes_projection(monkeypatch):
     assert report.weekly_post_target == 3
     assert report.estimated_weekly_engagement_value == 900.0  # 3 * 100 * 3.0
     assert report.estimated_weekly_follower_value == 1000.0  # 1000 * 0.05 * 20.0
+    assert report.estimated_weekly_affiliate_revenue == 900.0  # 100 * 0.03 * 300.0
     assert report.estimated_weekly_generation_cost == 3.0  # 3 * 1.0
-    assert report.estimated_weekly_profit == 1897.0
+    assert report.estimated_weekly_profit == 2797.0
 
 
 def test_build_revenue_report_counts_only_successful_publishes():

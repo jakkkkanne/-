@@ -35,6 +35,14 @@ def test_build_marketing_plan_no_posts_gets_minimum_cadence():
     assert plan.posting_cadence_per_week == 1
 
 
+def test_build_marketing_plan_respects_weekly_target_override(monkeypatch):
+    from threads_ops import config
+
+    monkeypatch.setattr(config, "WEEKLY_POST_TARGET_OVERRIDE", 42)
+    plan = marketing.build_marketing_plan(_report(post_count=5))
+    assert plan.posting_cadence_per_week == 42
+
+
 def test_run_marketing_saves_and_loads_latest(tmp_dirs):
     report = _report()
     plan, path = marketing.run_marketing(report, tmp_dirs["marketing"])

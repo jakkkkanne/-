@@ -33,6 +33,27 @@ REVENUE_PER_NEW_FOLLOWER = float(os.environ.get("THREADS_OPS_REVENUE_PER_FOLLOWE
 CURRENT_FOLLOWER_COUNT = int(os.environ.get("THREADS_OPS_FOLLOWER_COUNT", "0"))
 COST_PER_DRAFT_GENERATED = float(os.environ.get("THREADS_OPS_COST_PER_DRAFT", "0.0"))
 
+# Research: a post at/above this view count is treated as "viral" -- the
+# research department analyzes these separately to find the format/pattern
+# worth reproducing (see research.analyze()'s patterns_by_type).
+MIN_VIRAL_VIEWS = int(os.environ.get("THREADS_OPS_MIN_VIRAL_VIEWS", "10000"))
+
+# Marketing: when set, overrides the automatic post_count-based cadence
+# heuristic with an explicit business decision (e.g. "42 posts/week").
+_weekly_target_raw = os.environ.get("THREADS_OPS_WEEKLY_POST_TARGET")
+WEEKLY_POST_TARGET_OVERRIDE = int(_weekly_target_raw) if _weekly_target_raw else None
+
+# Rakuten affiliate monetization. RAKUTEN_AFFILIATE_ID is the ID issued by
+# Rakuten Affiliate (https://affiliate.rakuten.co.jp/) once your application
+# is approved -- there is no way to generate a working affiliate link without
+# it, so affiliate.py falls back to an explicit placeholder when it's unset.
+# The CTR/conversion/commission figures are planning assumptions, not
+# measured data; tune them once you have real click/purchase numbers.
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
+ESTIMATED_WEEKLY_AFFILIATE_CLICKS = float(os.environ.get("THREADS_OPS_WEEKLY_AFFILIATE_CLICKS", "0"))
+RAKUTEN_AVG_CONVERSION_RATE = float(os.environ.get("THREADS_OPS_RAKUTEN_CONVERSION_RATE", "0.03"))
+RAKUTEN_AVG_COMMISSION_PER_SALE = float(os.environ.get("THREADS_OPS_RAKUTEN_COMMISSION_PER_SALE", "300.0"))
+
 # "mock" never calls the real Threads API. "real" requires THREADS_ACCESS_TOKEN
 # and THREADS_USER_ID and performs actual publish calls.
 PUBLISHER_MODE = os.environ.get("THREADS_OPS_PUBLISHER", "mock")

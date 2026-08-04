@@ -115,6 +115,7 @@ def cmd_finance(args: argparse.Namespace) -> None:
     print(f"週次目標投稿数: {report.weekly_post_target} / 累計投稿数: {report.posts_published_total}")
     print(f"見込みエンゲージメント収益: {report.estimated_weekly_engagement_value}")
     print(f"見込みフォロワー収益: {report.estimated_weekly_follower_value}")
+    print(f"見込み楽天アフィリエイト収益: {report.estimated_weekly_affiliate_revenue}")
     print(f"見込み生成コスト: {report.estimated_weekly_generation_cost}")
     print(f"見込み週次利益: {report.estimated_weekly_profit}")
     print(report.notes)

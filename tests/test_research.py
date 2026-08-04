@@ -29,6 +29,8 @@ def test_analyze_empty_returns_zeroed_report():
     assert report.post_count == 0
     assert report.top_keywords == []
     assert report.avg_post_length == 0.0
+    assert report.viral_post_count == 0
+    assert report.patterns_by_type == {}
 
 
 def test_analyze_counts_keywords_hashtags_and_engagement():
@@ -71,3 +73,51 @@ def test_run_research_saves_report(tmp_dirs):
 
     latest = research.latest_report(tmp_dirs["reports"])
     assert latest.id == report.id
+
+
+def _viral_posts():
+    return [
+        CompetitorPost(
+            account="acct_a",
+            text="子育てあるある、わかる人だけ集まれ",
+            posted_at="2026-07-20T09:00:00+00:00",
+            likes=1000,
+            replies=100,
+            reposts=50,
+            views=15000,
+            post_type="あるある",
+        ),
+        CompetitorPost(
+            account="acct_a",
+            text="夜泣きで困っていませんか?",
+            posted_at="2026-07-20T09:10:00+00:00",
+            likes=800,
+            replies=90,
+            reposts=40,
+            views=12000,
+            post_type="困りごと",
+        ),
+        CompetitorPost(
+            account="acct_b",
+            text="閲覧数が少ない普通の投稿",
+            posted_at="2026-07-20T09:20:00+00:00",
+            likes=10,
+            replies=1,
+            reposts=0,
+            views=500,
+        ),
+    ]
+
+
+def test_analyze_identifies_viral_posts_and_patterns_by_type(monkeypatch):
+    from threads_ops import config
+
+    monkeypatch.setattr(config, "MIN_VIRAL_VIEWS", 10000)
+    report = research.analyze(_viral_posts())
+
+    assert report.viral_post_count == 2
+    assert report.viral_avg_views == 13500.0
+    assert set(report.patterns_by_type) == {"あるある", "困りごと"}
+    assert report.patterns_by_type["あるある"]["count"] == 1
+    assert report.patterns_by_type["あるある"]["avg_views"] == 15000.0
+    assert report.patterns_by_type["あるある"]["sample_openers"]

@@ -18,7 +18,11 @@ class CompetitorPost:
     likes: int = 0
     replies: int = 0
     reposts: int = 0
+    views: int = 0
     hashtags: list[str] = field(default_factory=list)
+    # Manually tagged post format, e.g. "あるある" / "困りごと" / "解決法".
+    # Optional -- populated by whoever curates data/competitors/*.json.
+    post_type: str | None = None
 
     def engagement_score(self) -> float:
         return self.likes + self.replies * 2 + self.reposts * 3
@@ -35,7 +39,9 @@ class CompetitorPost:
             likes=data.get("likes", 0),
             replies=data.get("replies", 0),
             reposts=data.get("reposts", 0),
+            views=data.get("views", 0),
             hashtags=data.get("hashtags", []),
+            post_type=data.get("post_type"),
         )
 
 
@@ -50,6 +56,9 @@ class ResearchReport:
     best_hours_utc: list[list]  # list of [hour, avg_engagement]
     avg_post_length: float
     top_posts: list[dict]  # highest-engagement CompetitorPost dicts, for reference
+    viral_post_count: int = 0  # posts at/above config.MIN_VIRAL_VIEWS
+    viral_avg_views: float = 0.0
+    patterns_by_type: dict = field(default_factory=dict)  # post_type -> stats dict
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -120,6 +129,7 @@ class RevenueReport:
     weekly_post_target: int
     estimated_weekly_engagement_value: float
     estimated_weekly_follower_value: float
+    estimated_weekly_affiliate_revenue: float
     estimated_weekly_generation_cost: float
     estimated_weekly_profit: float
     notes: str

@@ -30,16 +30,27 @@ def build_revenue_report(strategy_plan: StrategyPlan, history_entries: list[dict
     )
     new_followers = config.CURRENT_FOLLOWER_COUNT * (target_follower_growth_pct / 100)
     estimated_weekly_follower_value = new_followers * config.REVENUE_PER_NEW_FOLLOWER
+    estimated_weekly_affiliate_revenue = (
+        config.ESTIMATED_WEEKLY_AFFILIATE_CLICKS
+        * config.RAKUTEN_AVG_CONVERSION_RATE
+        * config.RAKUTEN_AVG_COMMISSION_PER_SALE
+    )
     estimated_weekly_generation_cost = strategy_plan.weekly_post_target * config.COST_PER_DRAFT_GENERATED
 
     estimated_weekly_profit = (
-        estimated_weekly_engagement_value + estimated_weekly_follower_value - estimated_weekly_generation_cost
+        estimated_weekly_engagement_value
+        + estimated_weekly_follower_value
+        + estimated_weekly_affiliate_revenue
+        - estimated_weekly_generation_cost
     )
 
     notes = (
-        f"週{strategy_plan.weekly_post_target}件・平均エンゲージメント{target_engagement}を想定した見込み値。"
-        "実測の収益ではなく、config.py の単価設定に基づく試算。"
+        f"週{strategy_plan.weekly_post_target}件・平均エンゲージメント{target_engagement}、"
+        f"楽天アフィリエイトのクリック想定{config.ESTIMATED_WEEKLY_AFFILIATE_CLICKS}件/週を前提とした見込み値。"
+        "実測の収益ではなく、config.py / .env の単価設定に基づく試算。"
     )
+    if not config.RAKUTEN_AFFILIATE_ID:
+        notes += " RAKUTEN_AFFILIATE_ID未設定のため、実際のリンクは収益化されていません。"
 
     return RevenueReport(
         id=storage.new_id("revenue"),
@@ -49,6 +60,7 @@ def build_revenue_report(strategy_plan: StrategyPlan, history_entries: list[dict
         weekly_post_target=strategy_plan.weekly_post_target,
         estimated_weekly_engagement_value=round(estimated_weekly_engagement_value, 1),
         estimated_weekly_follower_value=round(estimated_weekly_follower_value, 1),
+        estimated_weekly_affiliate_revenue=round(estimated_weekly_affiliate_revenue, 1),
         estimated_weekly_generation_cost=round(estimated_weekly_generation_cost, 1),
         estimated_weekly_profit=round(estimated_weekly_profit, 1),
         notes=notes,

@@ -64,6 +64,33 @@ def _hour_of(post: CompetitorPost) -> int | None:
         return None
 
 
+def _patterns_by_type(viral_posts: list[CompetitorPost]) -> dict:
+    """Summarize the reproducible "shape" of each post_type among viral posts.
+
+    This is what the strategy/draft stages lean on to reproduce the format
+    of posts that performed well, not just their topic.
+    """
+    by_type: dict[str, list[CompetitorPost]] = {}
+    for post in viral_posts:
+        if not post.post_type:
+            continue
+        by_type.setdefault(post.post_type, []).append(post)
+
+    patterns = {}
+    for post_type, type_posts in by_type.items():
+        top_by_views = sorted(type_posts, key=lambda p: p.views, reverse=True)
+        patterns[post_type] = {
+            "count": len(type_posts),
+            "avg_views": round(sum(p.views for p in type_posts) / len(type_posts), 1),
+            "avg_engagement": round(
+                sum(p.engagement_score() for p in type_posts) / len(type_posts), 1
+            ),
+            "avg_length": round(sum(len(p.text) for p in type_posts) / len(type_posts), 1),
+            "sample_openers": [p.text[:20] for p in top_by_views[:3]],
+        }
+    return patterns
+
+
 def analyze(posts: list[CompetitorPost], top_n: int = 15) -> ResearchReport:
     if not posts:
         return ResearchReport(
@@ -101,6 +128,8 @@ def analyze(posts: list[CompetitorPost], top_n: int = 15) -> ResearchReport:
 
     top_posts = sorted(posts, key=lambda p: p.engagement_score(), reverse=True)[:5]
 
+    viral_posts = [p for p in posts if p.views >= config.MIN_VIRAL_VIEWS]
+
     return ResearchReport(
         id=storage.new_id("report"),
         generated_at=now_iso(),
@@ -111,6 +140,11 @@ def analyze(posts: list[CompetitorPost], top_n: int = 15) -> ResearchReport:
         best_hours_utc=[[h, round(score, 2)] for h, score in best_hours],
         avg_post_length=round(sum(lengths) / len(lengths), 1),
         top_posts=[p.to_dict() for p in top_posts],
+        viral_post_count=len(viral_posts),
+        viral_avg_views=round(sum(p.views for p in viral_posts) / len(viral_posts), 1)
+        if viral_posts
+        else 0.0,
+        patterns_by_type=_patterns_by_type(viral_posts),
     )
 
 
