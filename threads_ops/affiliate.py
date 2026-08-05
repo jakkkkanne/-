@@ -40,10 +40,14 @@ def rakuten_search_url(keyword: str) -> str:
 
 
 def build_affiliate_link(keyword: str) -> str:
-    target = rakuten_search_url(keyword)
     if not config.RAKUTEN_AFFILIATE_ID:
-        return f"{target}(※RAKUTEN_AFFILIATE_ID未設定のため未収益化リンクです。.envに設定してください)"
-    encoded = quote(target, safe="")
+        return f"{rakuten_search_url(keyword)}(※RAKUTEN_AFFILIATE_ID未設定のため未収益化リンクです。.envに設定してください)"
+    # Percent-encode the raw target exactly once here -- rakuten_search_url()
+    # already returns an encoded URL, and re-encoding *that* would double-
+    # escape every "%", which needlessly (~doubles) inflates link length and
+    # eats into the 500-char post budget.
+    raw_target = f"https://search.rakuten.co.jp/search/mall/{keyword}/"
+    encoded = quote(raw_target, safe=":/")
     return f"https://hb.afl.rakuten.co.jp/hgc/{config.RAKUTEN_AFFILIATE_ID}/?pc={encoded}&m={encoded}"
 
 
