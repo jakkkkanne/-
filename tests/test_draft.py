@@ -78,12 +78,13 @@ def test_template_generator_includes_growth_tactic_when_marketing_plan_given():
     assert "施策: " + plan.growth_tactics[0] in drafts[0]
 
 
-def test_template_generator_uses_marketing_plan_hashtags():
+def test_template_generator_does_not_include_hashtags():
     generator = draft.TemplateDraftGenerator()
     plan = _marketing_plan()
-    drafts = generator.generate(_report(), topic="朝活", count=1, marketing_plan=plan)
+    drafts = generator.generate(_report(), topic="朝活", count=3, marketing_plan=plan)
 
-    assert "#sns運用" in drafts[0]
+    for text in drafts:
+        assert "#" not in text
 
 
 def test_create_drafts_passes_marketing_plan_through(tmp_dirs):
@@ -97,4 +98,4 @@ def test_create_drafts_passes_marketing_plan_through(tmp_dirs):
         pending_dir=tmp_dirs["pending"],
         marketing_plan=plan,
     )
-    assert "#sns運用" in drafts[0].text
+    assert "施策: " + plan.growth_tactics[0] in drafts[0].text

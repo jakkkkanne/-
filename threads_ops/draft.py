@@ -83,10 +83,6 @@ class TemplateDraftGenerator:
         marketing_plan: MarketingPlan | None = None,
     ) -> list[str]:
         keywords = [kw for kw, _ in report.top_keywords[:5]]
-        if marketing_plan and marketing_plan.hashtag_strategy:
-            hashtags = marketing_plan.hashtag_strategy[:3]
-        else:
-            hashtags = [f"#{h}" for h, _ in report.top_hashtags[:3]]
 
         polite = bool(marketing_plan and marketing_plan.tone == "詳しく丁寧")
         openers = self._OPENERS_POLITE if polite else self._OPENERS_CASUAL
@@ -107,8 +103,6 @@ class TemplateDraftGenerator:
                 body_bits.append("施策: " + tactics[i % len(tactics)])
             body = "\n".join(body_bits) if body_bits else "参考になるデータがまだ十分ではありません。"
             text = "\n\n".join([opener, body, closer])
-            if hashtags:
-                text += "\n\n" + " ".join(hashtags)
             drafts.append(_truncate(text, config.THREADS_MAX_CHARS))
         return drafts
 
@@ -133,11 +127,9 @@ class AnthropicDraftGenerator:
 
         client = anthropic.Anthropic(api_key=self.api_key)
         keywords = ", ".join(kw for kw, _ in report.top_keywords[:8])
-        hashtags = ", ".join(f"#{h}" for h, _ in report.top_hashtags[:5])
 
         marketing_guidance = ""
         if marketing_plan:
-            hashtags = ", ".join(marketing_plan.hashtag_strategy) or hashtags
             tactics = "\n".join(f"- {t}" for t in marketing_plan.growth_tactics)
             marketing_guidance = textwrap.dedent(f"""
 
@@ -154,12 +146,12 @@ class AnthropicDraftGenerator:
 
             リサーチ結果:
             - よく使われるキーワード: {keywords or "なし"}
-            - よく使われるハッシュタグ: {hashtags or "なし"}
             - 平均投稿文字数: {report.avg_post_length}
             {marketing_guidance}
             制約:
             - 1件あたり{config.THREADS_MAX_CHARS}文字以内
             - 各案は "---" だけの行で区切る
+            - ハッシュタグは付けない
             - 前置きや説明は不要。投稿文案のみを出力する
         """)
         response = client.messages.create(
