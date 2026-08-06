@@ -54,3 +54,33 @@ def test_run_marketing_saves_and_loads_latest(tmp_dirs):
 
 def test_latest_marketing_plan_returns_none_when_empty(tmp_dirs):
     assert marketing.latest_marketing_plan(tmp_dirs["marketing"]) is None
+
+
+def test_predict_trending_format_no_data_returns_none():
+    predicted, resonant, rationale = marketing.predict_trending_format(_report())
+    assert predicted is None
+    assert resonant is None
+    assert rationale
+
+
+def test_predict_trending_format_picks_views_and_replies_leaders():
+    report = _report()
+    report.text_only_patterns_by_type = {
+        "解決法": {"count": 3, "avg_views": 30000.0, "avg_engagement": 500.0, "avg_replies": 50.0, "avg_length": 100.0, "sample_openers": []},
+        "困りごと": {"count": 3, "avg_views": 15000.0, "avg_engagement": 400.0, "avg_replies": 90.0, "avg_length": 60.0, "sample_openers": []},
+    }
+    predicted, resonant, rationale = marketing.predict_trending_format(report)
+    assert predicted == "解決法"  # highest avg_views
+    assert resonant == "困りごと"  # highest avg_replies
+    assert "解決法" in rationale and "困りごと" in rationale
+
+
+def test_build_marketing_plan_includes_trend_prediction():
+    report = _report()
+    report.text_only_patterns_by_type = {
+        "解決法": {"count": 3, "avg_views": 30000.0, "avg_engagement": 500.0, "avg_replies": 90.0, "avg_length": 100.0, "sample_openers": []},
+    }
+    plan = marketing.build_marketing_plan(report)
+    assert plan.predicted_trending_type == "解決法"
+    assert plan.target_resonant_type == "解決法"
+    assert plan.trend_rationale

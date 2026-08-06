@@ -16,6 +16,14 @@ Keyword extraction is a plain regex tokenizer (no Japanese morphological
 analyzer such as MeCab/fugashi), so it works best on hashtags and
 space-delimited terms; unsegmented running Japanese text will come out as
 coarser multi-character chunks rather than individual words.
+
+`analyze()` also breaks out a text-only view (media_type == "text",
+excluding image/video posts) for two things the operator asked for
+specifically: which weekday x hour slots perform best (day_hour_performance)
+and, among those, what format ("post_type") the viral (>= MIN_VIRAL_VIEWS)
+ones use (text_only_patterns_by_type). Both are only as good as the data
+you feed in -- there's no bundled multi-year dataset; if you want a genuine
+multi-year view, curate that history into data/competitors/ yourself.
 """
 
 from __future__ import annotations
@@ -28,6 +36,8 @@ from . import config, storage
 from .models import CompetitorPost, ResearchReport, now_iso
 
 AGENT_NAME = "アヤ"  # リサーチ部門担当
+
+_WEEKDAY_JP = ["月", "火", "水", "木", "金", "土", "日"]
 
 _HASHTAG_RE = re.compile(r"#(\w+)")
 _WORD_RE = re.compile(r"[\w']+", re.UNICODE)
@@ -58,12 +68,17 @@ def _tokenize(text: str) -> list[str]:
     return [t for t in tokens if len(t) > 1 and t not in _STOPWORDS]
 
 
-def _hour_of(post: CompetitorPost) -> int | None:
+def _post_datetime(post: CompetitorPost) -> datetime | None:
     try:
         dt = datetime.fromisoformat(post.posted_at.replace("Z", "+00:00"))
-        return dt.astimezone(timezone.utc).hour
+        return dt.astimezone(timezone.utc)
     except ValueError:
         return None
+
+
+def _hour_of(post: CompetitorPost) -> int | None:
+    dt = _post_datetime(post)
+    return dt.hour if dt else None
 
 
 def _patterns_by_type(viral_posts: list[CompetitorPost]) -> dict:
@@ -87,10 +102,34 @@ def _patterns_by_type(viral_posts: list[CompetitorPost]) -> dict:
             "avg_engagement": round(
                 sum(p.engagement_score() for p in type_posts) / len(type_posts), 1
             ),
+            "avg_replies": round(sum(p.replies for p in type_posts) / len(type_posts), 1),
             "avg_length": round(sum(len(p.text) for p in type_posts) / len(type_posts), 1),
             "sample_openers": [p.text[:20] for p in top_by_views[:3]],
         }
     return patterns
+
+
+def _day_hour_performance(text_only_posts: list[CompetitorPost]) -> list[list]:
+    """Which weekday x hour slots text-only posts perform best in (アヤ's 曜日x時間帯分析).
+
+    Score is avg engagement_score() per (weekday, hour) bucket, sorted best
+    first. Scoped to media_type == "text" posts per the operator's request
+    to look only at posts that grew on text alone (no image/video).
+    """
+    buckets: dict[tuple[str, int], list[float]] = {}
+    for post in text_only_posts:
+        dt = _post_datetime(post)
+        if dt is None:
+            continue
+        key = (_WEEKDAY_JP[dt.weekday()], dt.hour)
+        buckets.setdefault(key, []).append(post.engagement_score())
+
+    rows = [
+        [weekday, hour, round(sum(scores) / len(scores), 1), len(scores)]
+        for (weekday, hour), scores in buckets.items()
+    ]
+    rows.sort(key=lambda row: row[2], reverse=True)
+    return rows
 
 
 def analyze(posts: list[CompetitorPost], top_n: int = 15) -> ResearchReport:
@@ -132,6 +171,9 @@ def analyze(posts: list[CompetitorPost], top_n: int = 15) -> ResearchReport:
 
     viral_posts = [p for p in posts if p.views >= config.MIN_VIRAL_VIEWS]
 
+    text_only_posts = [p for p in posts if p.media_type == "text"]
+    text_only_viral_posts = [p for p in text_only_posts if p.views >= config.MIN_VIRAL_VIEWS]
+
     return ResearchReport(
         id=storage.new_id("report"),
         generated_at=now_iso(),
@@ -147,6 +189,9 @@ def analyze(posts: list[CompetitorPost], top_n: int = 15) -> ResearchReport:
         if viral_posts
         else 0.0,
         patterns_by_type=_patterns_by_type(viral_posts),
+        text_only_post_count=len(text_only_posts),
+        day_hour_performance=_day_hour_performance(text_only_posts),
+        text_only_patterns_by_type=_patterns_by_type(text_only_viral_posts),
     )
 
 

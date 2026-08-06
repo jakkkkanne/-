@@ -16,20 +16,24 @@ from urllib.parse import quote, quote_plus
 
 from . import config
 
-# Pain point -> Rakuten Ichiba search keyword. Deliberately generic product
-# categories rather than specific brands/models: pick an actual product
-# yourself before publishing, this just points at the right search results.
-PRODUCT_CATALOG: dict[str, str] = {
-    "夜泣き": "ホワイトノイズマシン 赤ちゃん",
-    "寝かしつけ": "スワドル おくるみ",
-    "離乳食": "離乳食 調理セット",
-    "イヤイヤ期": "育児 絵本 感情",
-    "お出かけ": "抱っこ紐",
-    "授乳": "授乳クッション",
-    "鼻水": "電動鼻水吸引器",
-    "後追い": "ベビーサークル",
-    "時短家事": "食洗機",
-    "沐浴": "沐浴チェア",
+# Pain point -> product info. Deliberately generic product categories
+# rather than specific brands/models: pick an actual product yourself
+# before publishing. price_jpy is a rough market price used by the
+# レン (finance) price-band filter (config.AFFILIATE_MIN_PRICE_JPY /
+# AFFILIATE_MAX_PRICE_JPY) -- some categories (e.g. a real dishwasher) are
+# realistically priced outside a small-ticket-item range on purpose, so the
+# filter can honestly exclude them rather than fabricate a fake cheap price.
+PRODUCT_CATALOG: dict[str, dict] = {
+    "夜泣き": {"name": "ホワイトノイズマシン", "keyword": "ホワイトノイズマシン 赤ちゃん", "price_jpy": 3480},
+    "寝かしつけ": {"name": "スワドルおくるみ", "keyword": "スワドル おくるみ", "price_jpy": 2680},
+    "離乳食": {"name": "離乳食調理セット", "keyword": "離乳食 調理セット", "price_jpy": 3280},
+    "イヤイヤ期": {"name": "気持ちが学べる絵本", "keyword": "育児 絵本 感情", "price_jpy": 1200},
+    "お出かけ": {"name": "抱っこ紐", "keyword": "抱っこ紐", "price_jpy": 8900},
+    "授乳": {"name": "授乳クッション", "keyword": "授乳クッション", "price_jpy": 3980},
+    "鼻水": {"name": "電動鼻水吸引器", "keyword": "電動鼻水吸引器", "price_jpy": 5980},
+    "後追い": {"name": "折りたたみベビーサークル", "keyword": "折りたたみ ベビーサークル", "price_jpy": 5480},
+    "時短家事": {"name": "食洗機", "keyword": "食洗機", "price_jpy": 25000},
+    "沐浴": {"name": "沐浴チェア", "keyword": "沐浴チェア", "price_jpy": 2980},
 }
 
 
@@ -53,7 +57,36 @@ def build_affiliate_link(keyword: str) -> str:
 
 def recommend_product(pain_point: str) -> tuple[str, str] | None:
     """Look up a product keyword + affiliate link for a pain point, if cataloged."""
-    keyword = PRODUCT_CATALOG.get(pain_point)
-    if not keyword:
+    entry = PRODUCT_CATALOG.get(pain_point)
+    if not entry:
         return None
-    return keyword, build_affiliate_link(keyword)
+    return entry["keyword"], build_affiliate_link(entry["keyword"])
+
+
+def recommend_in_price_range(
+    pain_point: str, min_price_jpy: int | None = None, max_price_jpy: int | None = None
+) -> dict | None:
+    """レン's price-banded product pick: name/keyword/price/link, or None if out of range.
+
+    min/max default to config.AFFILIATE_MIN_PRICE_JPY / AFFILIATE_MAX_PRICE_JPY
+    (either side may be unset, meaning no bound on that side).
+    """
+    entry = PRODUCT_CATALOG.get(pain_point)
+    if not entry:
+        return None
+
+    min_price = config.AFFILIATE_MIN_PRICE_JPY if min_price_jpy is None else min_price_jpy
+    max_price = config.AFFILIATE_MAX_PRICE_JPY if max_price_jpy is None else max_price_jpy
+    price = entry["price_jpy"]
+    if min_price is not None and price < min_price:
+        return None
+    if max_price is not None and price > max_price:
+        return None
+
+    return {
+        "pain_point": pain_point,
+        "name": entry["name"],
+        "keyword": entry["keyword"],
+        "price_jpy": price,
+        "link": build_affiliate_link(entry["keyword"]),
+    }

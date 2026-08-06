@@ -54,6 +54,13 @@ ESTIMATED_WEEKLY_AFFILIATE_CLICKS = float(os.environ.get("THREADS_OPS_WEEKLY_AFF
 RAKUTEN_AVG_CONVERSION_RATE = float(os.environ.get("THREADS_OPS_RAKUTEN_CONVERSION_RATE", "0.03"))
 RAKUTEN_AVG_COMMISSION_PER_SALE = float(os.environ.get("THREADS_OPS_RAKUTEN_COMMISSION_PER_SALE", "300.0"))
 
+# レン's price band for affiliate product recommendations (JPY). Either side
+# may be left unset (no bound). Business decision, not derived from data.
+_affiliate_min_price_raw = os.environ.get("THREADS_OPS_AFFILIATE_MIN_PRICE_JPY")
+_affiliate_max_price_raw = os.environ.get("THREADS_OPS_AFFILIATE_MAX_PRICE_JPY")
+AFFILIATE_MIN_PRICE_JPY = int(_affiliate_min_price_raw) if _affiliate_min_price_raw else None
+AFFILIATE_MAX_PRICE_JPY = int(_affiliate_max_price_raw) if _affiliate_max_price_raw else None
+
 # "mock" never calls the real Threads API. "real" requires THREADS_ACCESS_TOKEN
 # and THREADS_USER_ID and performs actual publish calls.
 PUBLISHER_MODE = os.environ.get("THREADS_OPS_PUBLISHER", "mock")

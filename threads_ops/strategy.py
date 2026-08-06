@@ -7,10 +7,12 @@ is what the secretary department hands to the draft stage.
 
 from __future__ import annotations
 
-from . import config, storage
+from . import affiliate, config, storage
 from .models import MarketingPlan, ResearchReport, StrategyPlan, now_iso
 
 AGENT_NAME = "カイ"  # 戦略部門担当
+
+_WEEKDAY_ORDER = ["月", "火", "水", "木", "金", "土", "日"]
 
 
 def _avg_engagement(report: ResearchReport) -> float:
@@ -28,11 +30,111 @@ def _pick_content_pillars(report: ResearchReport, top_n: int = 5) -> list[str]:
     # than the free-text keyword tokenizer, which -- absent a Japanese
     # morphological analyzer -- turns unspaced Japanese sentences into a few
     # coarse multi-word chunks rather than real keywords (see research.py).
+    # Exclude hashtags that coincide with a post_type label seen in this
+    # report's own data (e.g. a "#解決法" hashtag) -- those describe the
+    # post's *format*, not a topic, and would otherwise show up as a
+    # confusing "topic: 解決法" slot in カイ's calendar.
+    format_labels = set(report.patterns_by_type) | set(report.text_only_patterns_by_type)
+    hashtag_topics = [h for h, _ in report.top_hashtags if h not in format_labels]
+    if hashtag_topics:
+        return hashtag_topics[:top_n]
     if report.top_hashtags:
         return [h for h, _ in report.top_hashtags[:top_n]]
     if report.top_keywords:
         return [kw for kw, _ in report.top_keywords[:top_n]]
     return ["ブランド紹介"]
+
+
+def build_weekly_calendar(
+    report: ResearchReport,
+    marketing_plan: MarketingPlan,
+    content_pillars: list[str],
+    posts_per_day: int = 6,
+    min_price_jpy: int | None = None,
+    max_price_jpy: int | None = None,
+) -> list[dict]:
+    """カイ's day x hour content calendar.
+
+    Slots are seeded from アヤ's day_hour_performance (best weekday x hour
+    buckets among text-only posts); when a day doesn't have enough
+    historical slots to fill posts_per_day, it's padded from
+    report.best_hours_utc. post_type alternates between ハル's predicted
+    trending type and the audience-resonant type so both growth and
+    engagement are represented across the week. When the slot's topic
+    matches a pain point in affiliate.PRODUCT_CATALOG and its price falls
+    in [min_price_jpy, max_price_jpy], the slot carries a product NAME
+    only -- never a URL; the actual link lives with レン (finance)/
+    affiliate.py, not in the calendar or the post text.
+    """
+    slots_by_weekday: dict[str, list[tuple[int, float]]] = {}
+    for weekday, hour, avg_score, _count in report.day_hour_performance:
+        slots_by_weekday.setdefault(weekday, []).append((hour, avg_score))
+
+    fallback_hours = [h for h, _ in report.best_hours_utc] or [9, 12, 18, 21, 0, 6]
+
+    trend_types = [
+        t for t in (marketing_plan.predicted_trending_type, marketing_plan.target_resonant_type) if t
+    ] or ["解決法"]
+
+    pillars = content_pillars or ["ブランド紹介"]
+
+    calendar: list[dict] = []
+    topic_i = 0
+    for weekday in _WEEKDAY_ORDER:
+        day_hours = sorted(slots_by_weekday.get(weekday, []), key=lambda item: item[1], reverse=True)
+        hours_for_day = [hour for hour, _score in day_hours[:posts_per_day]]
+
+        # Prefer distinct fallback hours first; once those run out (a small
+        # sample dataset may only have a handful of best_hours_utc entries),
+        # repeat them rather than under-filling the day -- posts_per_day is
+        # an explicit target (e.g. "6 posts/day") that has to be met even
+        # when the historical hour pool is thin.
+        pad_i = 0
+        while len(hours_for_day) < posts_per_day and pad_i < 200:
+            candidate = fallback_hours[pad_i % len(fallback_hours)]
+            if candidate not in hours_for_day or pad_i >= len(fallback_hours):
+                hours_for_day.append(candidate)
+            pad_i += 1
+        hours_for_day = hours_for_day[:posts_per_day]
+
+        for hour in hours_for_day:
+            post_type = trend_types[topic_i % len(trend_types)]
+            topic = pillars[topic_i % len(pillars)]
+            topic_i += 1
+
+            product = affiliate.recommend_in_price_range(topic, min_price_jpy, max_price_jpy)
+
+            score_for_hour = next((s for h, s in day_hours if h == hour), None)
+            basis = (
+                f"過去実績(平均エンゲージメント{score_for_hour})に基づく実績枠"
+                if score_for_hour is not None
+                else "実績データ不足のため反応が良い時間帯(best_hours_utc)から補完"
+            )
+            if post_type == marketing_plan.predicted_trending_type:
+                type_reason = "ハル予測: 伸びる型"
+            elif post_type == marketing_plan.target_resonant_type:
+                type_reason = "ハル予測: ターゲット層に刺さる型"
+            else:
+                type_reason = "型未予測のため既定"
+
+            note_bits = [f"型: {post_type}({type_reason})", basis]
+            if product:
+                note_bits.append(f"商品: {product['name']}({product['price_jpy']}円、価格帯内)")
+            elif post_type == "解決法":
+                note_bits.append("該当価格帯の商品なし(商品提案は見送り)")
+
+            calendar.append(
+                {
+                    "day": weekday,
+                    "hour": hour,
+                    "post_type": post_type,
+                    "topic": topic,
+                    "product_name": product["name"] if product else None,
+                    "notes": " / ".join(note_bits),
+                }
+            )
+
+    return calendar
 
 
 def build_strategy_plan(report: ResearchReport, marketing_plan: MarketingPlan) -> StrategyPlan:
@@ -50,6 +152,16 @@ def build_strategy_plan(report: ResearchReport, marketing_plan: MarketingPlan) -
         f"週{marketing_plan.posting_cadence_per_week}件を目安に投稿する。"
     )
 
+    posts_per_day = max(1, round(marketing_plan.posting_cadence_per_week / 7))
+    weekly_calendar = build_weekly_calendar(
+        report,
+        marketing_plan,
+        content_pillars,
+        posts_per_day=posts_per_day,
+        min_price_jpy=config.AFFILIATE_MIN_PRICE_JPY,
+        max_price_jpy=config.AFFILIATE_MAX_PRICE_JPY,
+    )
+
     return StrategyPlan(
         id=storage.new_id("strategy"),
         generated_at=now_iso(),
@@ -60,6 +172,7 @@ def build_strategy_plan(report: ResearchReport, marketing_plan: MarketingPlan) -
         weekly_post_target=marketing_plan.posting_cadence_per_week,
         kpi_targets=kpi_targets,
         notes=notes,
+        weekly_calendar=weekly_calendar,
     )
 
 

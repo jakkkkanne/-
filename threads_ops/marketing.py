@@ -22,6 +22,40 @@ _GROWTH_TACTICS = [
 ]
 
 
+def predict_trending_format(report: ResearchReport) -> tuple[str | None, str | None, str]:
+    """ハル's read on アヤ's text-only viral data: which post_type keeps growing,
+    and which one resonates most with the audience.
+
+    - predicted_trending_type: highest avg_views among text_only_patterns_by_type
+      (reach signal -- what's currently getting seen the most).
+    - target_resonant_type: highest avg_replies (engagement-depth signal --
+      what actually gets the audience talking, not just scrolling past).
+    They can be the same type or different; when different that's worth
+    calling out explicitly, since it means "what spreads" and "what
+    resonates" aren't the same post right now.
+    """
+    patterns = report.text_only_patterns_by_type
+    if not patterns:
+        return None, None, "バイラル(文章のみ)データが不足しているため型の予測はできません。"
+
+    predicted_type = max(patterns, key=lambda t: patterns[t]["avg_views"])
+    resonant_type = max(patterns, key=lambda t: patterns[t]["avg_replies"])
+
+    if predicted_type == resonant_type:
+        rationale = (
+            f"「{predicted_type}」が平均閲覧数{patterns[predicted_type]['avg_views']}・"
+            f"平均返信数{patterns[predicted_type]['avg_replies']}とも最も高く、"
+            "伸びと共感の両方でターゲット層に刺さっている型です。"
+        )
+    else:
+        rationale = (
+            f"「{predicted_type}」は平均閲覧数{patterns[predicted_type]['avg_views']}で最も伸びていますが、"
+            f"「{resonant_type}」は平均返信数{patterns[resonant_type]['avg_replies']}で"
+            "ターゲット層との会話が最も生まれている型です。両方を織り交ぜるのがおすすめです。"
+        )
+    return predicted_type, resonant_type, rationale
+
+
 def build_marketing_plan(report: ResearchReport) -> MarketingPlan:
     if config.WEEKLY_POST_TARGET_OVERRIDE is not None:
         # An explicit business decision (e.g. "42 posts/week") wins over the
@@ -36,6 +70,7 @@ def build_marketing_plan(report: ResearchReport) -> MarketingPlan:
 
     tone = "カジュアルで簡潔" if report.avg_post_length and report.avg_post_length < 150 else "詳しく丁寧"
     tactic_count = 4 if report.post_count >= 10 else 2
+    predicted_type, resonant_type, rationale = predict_trending_format(report)
 
     return MarketingPlan(
         id=storage.new_id("marketing"),
@@ -47,6 +82,9 @@ def build_marketing_plan(report: ResearchReport) -> MarketingPlan:
         tone=tone,
         posting_cadence_per_week=cadence,
         growth_tactics=_GROWTH_TACTICS[:tactic_count],
+        predicted_trending_type=predicted_type,
+        target_resonant_type=resonant_type,
+        trend_rationale=rationale,
     )
 
 

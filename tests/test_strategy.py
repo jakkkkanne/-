@@ -48,6 +48,15 @@ def test_build_strategy_plan_falls_back_to_keywords_when_no_hashtags():
     assert plan.content_pillars == ["マーケティング", "顧客", "朝活"]
 
 
+def test_build_strategy_plan_excludes_hashtags_that_are_post_type_labels():
+    report = _report()
+    report.top_hashtags = [["解決法", 6], ["夜泣き", 3], ["寝かしつけ", 2], ["イヤイヤ期", 1], ["沐浴", 1]]
+    report.patterns_by_type = {"解決法": {"count": 6}}
+    plan = strategy.build_strategy_plan(report, _marketing_plan())
+    assert "解決法" not in plan.content_pillars
+    assert plan.content_pillars == ["夜泣き", "寝かしつけ", "イヤイヤ期", "沐浴"]
+
+
 def test_build_strategy_plan_falls_back_to_default_when_no_data():
     report = _report()
     report.top_hashtags = []
@@ -63,3 +72,52 @@ def test_run_strategy_saves_and_loads_latest(tmp_dirs):
 
     latest = strategy.latest_strategy_plan(tmp_dirs["strategy"])
     assert latest.id == plan.id
+
+
+def test_build_strategy_plan_includes_weekly_calendar():
+    plan = strategy.build_strategy_plan(_report(), _marketing_plan())
+    assert len(plan.weekly_calendar) == 7  # posting_cadence_per_week=3 -> 1/day
+    days = {slot["day"] for slot in plan.weekly_calendar}
+    assert days == {"月", "火", "水", "木", "金", "土", "日"}
+    for slot in plan.weekly_calendar:
+        assert slot["notes"]
+
+
+def test_build_weekly_calendar_uses_day_hour_performance_when_available():
+    report = _report()
+    report.day_hour_performance = [["月", 21, 500.0, 3], ["火", 9, 300.0, 2]]
+    plan = _marketing_plan()
+    plan.predicted_trending_type = "解決法"
+    plan.target_resonant_type = "困りごと"
+
+    calendar = strategy.build_weekly_calendar(report, plan, ["夜泣き"], posts_per_day=1)
+    monday_slot = next(s for s in calendar if s["day"] == "月")
+    assert monday_slot["hour"] == 21
+    assert "実績枠" in monday_slot["notes"]
+
+
+def test_build_weekly_calendar_shows_product_name_not_url_within_price_band():
+    report = _report()
+    plan = _marketing_plan()
+    plan.predicted_trending_type = "解決法"
+
+    calendar = strategy.build_weekly_calendar(
+        report, plan, ["夜泣き"], posts_per_day=1, min_price_jpy=2000, max_price_jpy=6000
+    )
+    slot = calendar[0]
+    assert slot["product_name"] == "ホワイトノイズマシン"
+    assert "http" not in slot["notes"]
+    assert "http" not in (slot["product_name"] or "")
+
+
+def test_build_weekly_calendar_excludes_product_outside_price_band():
+    report = _report()
+    plan = _marketing_plan()
+    plan.predicted_trending_type = "解決法"
+
+    calendar = strategy.build_weekly_calendar(
+        report, plan, ["イヤイヤ期"], posts_per_day=1, min_price_jpy=2000, max_price_jpy=6000
+    )
+    slot = calendar[0]
+    assert slot["product_name"] is None
+    assert "見送り" in slot["notes"]

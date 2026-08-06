@@ -120,4 +120,37 @@ def test_analyze_identifies_viral_posts_and_patterns_by_type(monkeypatch):
     assert set(report.patterns_by_type) == {"あるある", "困りごと"}
     assert report.patterns_by_type["あるある"]["count"] == 1
     assert report.patterns_by_type["あるある"]["avg_views"] == 15000.0
+    assert report.patterns_by_type["あるある"]["avg_replies"] == 100.0
     assert report.patterns_by_type["あるある"]["sample_openers"]
+
+
+def test_day_hour_performance_scoped_to_text_only_posts(monkeypatch):
+    from threads_ops import config
+
+    monkeypatch.setattr(config, "MIN_VIRAL_VIEWS", 10000)
+    posts = _viral_posts() + [
+        CompetitorPost(
+            account="acct_c",
+            text="画像つきなので集計対象外",
+            posted_at="2026-07-20T09:00:00+00:00",
+            likes=5000,
+            replies=500,
+            reposts=200,
+            views=50000,
+            post_type="解決法",
+            media_type="image",
+        ),
+    ]
+    report = research.analyze(posts)
+
+    # 2026-07-20 is a Monday; only the two text-only posts count.
+    assert report.text_only_post_count == 3
+    assert report.day_hour_performance
+    weekday, hour, avg_score, count = report.day_hour_performance[0]
+    assert weekday == "月"
+    assert hour == 9
+    assert count == 3
+
+    # The image post is excluded from the text-only viral pattern analysis.
+    assert "解決法" not in report.text_only_patterns_by_type
+    assert set(report.text_only_patterns_by_type) == {"あるある", "困りごと"}

@@ -34,10 +34,26 @@ def run_company_cycle(topic_count: int = 3, drafts_per_topic: int = 2) -> tuple[
         )
         draft_ids.extend(d.id for d in drafts)
 
+    if report.day_hour_performance:
+        w, h, score, _cnt = report.day_hour_performance[0]
+        best_slot_note = f"最強スロット: {w}曜{h}時(平均エンゲージメント{score})"
+    else:
+        best_slot_note = "曜日x時間帯の実績データ不足"
+
     summaries = {
-        "research": f"[{research.AGENT_NAME}] {report.post_count}件の投稿を{len(report.accounts_analyzed)}アカウント分析",
-        "marketing": f"[{marketing.AGENT_NAME}] 投稿トーン: {marketing_plan.tone} / 週{marketing_plan.posting_cadence_per_week}件目安",
-        "strategy": f"[{strategy.AGENT_NAME}] 優先トピック: {', '.join(strategy_plan.priority_topics)}",
+        "research": (
+            f"[{research.AGENT_NAME}] {report.post_count}件の投稿を{len(report.accounts_analyzed)}アカウント分析"
+            f"(文章のみ{report.text_only_post_count}件)。{best_slot_note}"
+        ),
+        "marketing": (
+            f"[{marketing.AGENT_NAME}] 投稿トーン: {marketing_plan.tone} / 週{marketing_plan.posting_cadence_per_week}件目安"
+            f" / 伸びる型予測: {marketing_plan.predicted_trending_type or '不明'}"
+            f" / ターゲット共鳴型: {marketing_plan.target_resonant_type or '不明'}"
+        ),
+        "strategy": (
+            f"[{strategy.AGENT_NAME}] 優先トピック: {', '.join(strategy_plan.priority_topics)}"
+            f" / 曜日x時間帯カレンダー{len(strategy_plan.weekly_calendar)}枠を作成"
+        ),
         "finance": f"[{finance.AGENT_NAME}] 週次見込み利益: {revenue_report.estimated_weekly_profit}(投稿累計{revenue_report.posts_published_total}件)",
         "secretary": f"[{AGENT_NAME}] {len(topics)}トピックに対し計{len(draft_ids)}件の下書きを作成",
     }
