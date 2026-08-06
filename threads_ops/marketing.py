@@ -10,6 +10,8 @@ from __future__ import annotations
 from . import config, storage
 from .models import MarketingPlan, ResearchReport, now_iso
 
+AGENT_NAME = "ハル"  # マーケティング部門担当
+
 _GROWTH_TACTICS = [
     "反応の良い時間帯(best_hours_utc)に投稿を集中させる",
     "上位ハッシュタグを毎回1〜2個添えてリーチを広げる",

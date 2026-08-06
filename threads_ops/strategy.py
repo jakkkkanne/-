@@ -10,6 +10,8 @@ from __future__ import annotations
 from . import config, storage
 from .models import MarketingPlan, ResearchReport, StrategyPlan, now_iso
 
+AGENT_NAME = "カイ"  # 戦略部門担当
+
 
 def _avg_engagement(report: ResearchReport) -> float:
     if not report.top_posts:

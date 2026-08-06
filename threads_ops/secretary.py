@@ -15,6 +15,8 @@ from collections.abc import Callable
 from . import config, draft, finance, marketing, research, storage, strategy
 from .models import CompanyReport, now_iso
 
+AGENT_NAME = "ミナ"  # 秘書部門担当(各部門を統括)
+
 
 def run_company_cycle(topic_count: int = 3, drafts_per_topic: int = 2) -> tuple[CompanyReport, str]:
     config.ensure_dirs()
@@ -33,11 +35,11 @@ def run_company_cycle(topic_count: int = 3, drafts_per_topic: int = 2) -> tuple[
         draft_ids.extend(d.id for d in drafts)
 
     summaries = {
-        "research": f"{report.post_count}件の投稿を{len(report.accounts_analyzed)}アカウント分析",
-        "marketing": f"投稿トーン: {marketing_plan.tone} / 週{marketing_plan.posting_cadence_per_week}件目安",
-        "strategy": f"優先トピック: {', '.join(strategy_plan.priority_topics)}",
-        "finance": f"週次見込み利益: {revenue_report.estimated_weekly_profit}(投稿累計{revenue_report.posts_published_total}件)",
-        "secretary": f"{len(topics)}トピックに対し計{len(draft_ids)}件の下書きを作成",
+        "research": f"[{research.AGENT_NAME}] {report.post_count}件の投稿を{len(report.accounts_analyzed)}アカウント分析",
+        "marketing": f"[{marketing.AGENT_NAME}] 投稿トーン: {marketing_plan.tone} / 週{marketing_plan.posting_cadence_per_week}件目安",
+        "strategy": f"[{strategy.AGENT_NAME}] 優先トピック: {', '.join(strategy_plan.priority_topics)}",
+        "finance": f"[{finance.AGENT_NAME}] 週次見込み利益: {revenue_report.estimated_weekly_profit}(投稿累計{revenue_report.posts_published_total}件)",
+        "secretary": f"[{AGENT_NAME}] {len(topics)}トピックに対し計{len(draft_ids)}件の下書きを作成",
     }
 
     next_actions = [

@@ -27,6 +27,8 @@ from datetime import datetime, timezone
 from . import config, storage
 from .models import CompetitorPost, ResearchReport, now_iso
 
+AGENT_NAME = "アヤ"  # リサーチ部門担当
+
 _HASHTAG_RE = re.compile(r"#(\w+)")
 _WORD_RE = re.compile(r"[\w']+", re.UNICODE)
 

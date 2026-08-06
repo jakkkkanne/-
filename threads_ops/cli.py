@@ -26,6 +26,7 @@ from . import approval, config, draft, finance, marketing, publish, research, se
 def cmd_research(args: argparse.Namespace) -> None:
     config.ensure_dirs()
     report, path = research.run_research()
+    print(f"[リサーチ部門 - {research.AGENT_NAME}]")
     print(f"競合投稿 {report.post_count} 件を分析しました ({len(report.accounts_analyzed)} アカウント)")
     print(f"レポート保存先: {path}")
     if report.top_keywords:
@@ -78,6 +79,7 @@ def cmd_marketing(args: argparse.Namespace) -> None:
         print("リサーチレポートがありません。先に `research` を実行してください。", file=sys.stderr)
         raise SystemExit(1)
     plan, path = marketing.run_marketing(report)
+    print(f"[マーケティング部門 - {marketing.AGENT_NAME}]")
     print(f"マーケティングプラン保存先: {path}")
     print(f"トーン: {plan.tone} / 投稿頻度: 週{plan.posting_cadence_per_week}件")
     if plan.hashtag_strategy:
@@ -97,6 +99,7 @@ def cmd_strategy(args: argparse.Namespace) -> None:
         print("マーケティングプランがありません。先に `marketing` を実行してください。", file=sys.stderr)
         raise SystemExit(1)
     strategy_plan, path = strategy.run_strategy(report, plan)
+    print(f"[戦略部門 - {strategy.AGENT_NAME}]")
     print(f"戦略プラン保存先: {path}")
     print("コンテンツの柱:", ", ".join(strategy_plan.content_pillars))
     print("優先トピック:", ", ".join(strategy_plan.priority_topics))
@@ -111,6 +114,7 @@ def cmd_finance(args: argparse.Namespace) -> None:
         print("戦略プランがありません。先に `strategy` を実行してください。", file=sys.stderr)
         raise SystemExit(1)
     report, path = finance.run_finance(strategy_plan)
+    print(f"[収益管理部門 - {finance.AGENT_NAME}]")
     print(f"収益レポート保存先: {path}")
     print(f"週次目標投稿数: {report.weekly_post_target} / 累計投稿数: {report.posts_published_total}")
     print(f"見込みエンゲージメント収益: {report.estimated_weekly_engagement_value}")
@@ -135,6 +139,7 @@ def cmd_secretary(args: argparse.Namespace) -> None:
 
     if not args.loop:
         report, path = secretary.run_company_cycle(topic_count=args.topics, drafts_per_topic=args.count)
+        print(f"[秘書部門 - {secretary.AGENT_NAME}]")
         print(f"会社運用レポート保存先: {path}")
         _print_company_report(report)
         return
@@ -144,6 +149,7 @@ def cmd_secretary(args: argparse.Namespace) -> None:
         _print_company_report(report)
 
     interval_seconds = args.interval_hours * 3600
+    print(f"[秘書部門 - {secretary.AGENT_NAME}]")
     print(
         f"秘書部門ループを開始します(間隔: {args.interval_hours}時間、"
         f"{'無期限' if args.max_iterations is None else f'{args.max_iterations}回'})。Ctrl+Cで停止できます。"

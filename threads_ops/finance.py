@@ -13,6 +13,8 @@ from __future__ import annotations
 from . import config, storage
 from .models import RevenueReport, StrategyPlan, now_iso
 
+AGENT_NAME = "レン"  # 収益管理部門担当
+
 
 def load_publish_history(history_file=None) -> list[dict]:
     history_file = history_file or config.HISTORY_FILE
