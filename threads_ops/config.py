@@ -50,10 +50,13 @@ WEEKLY_POST_TARGET_OVERRIDE = int(_weekly_target_raw) if _weekly_target_raw else
 # The CTR/conversion/commission figures are planning assumptions, not
 # measured data; tune them once you have real click/purchase numbers.
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "")
-# Separate credential from RAKUTEN_AFFILIATE_ID above -- issued by
+# Separate credentials from RAKUTEN_AFFILIATE_ID above -- issued together by
 # https://webservice.rakuten.co.jp/ for calling Rakuten's search/ranking
-# APIs (see rakuten_ranking.py). Not required unless you use that module.
+# APIs (see rakuten_ranking.py). Both are required after Rakuten's Feb 2026
+# API migration (applicationId alone is no longer sufficient). Not needed
+# unless you use rakuten_ranking.py.
 RAKUTEN_APPLICATION_ID = os.environ.get("RAKUTEN_APPLICATION_ID", "")
+RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "")
 ESTIMATED_WEEKLY_AFFILIATE_CLICKS = float(os.environ.get("THREADS_OPS_WEEKLY_AFFILIATE_CLICKS", "0"))
 RAKUTEN_AVG_CONVERSION_RATE = float(os.environ.get("THREADS_OPS_RAKUTEN_CONVERSION_RATE", "0.03"))
 RAKUTEN_AVG_COMMISSION_PER_SALE = float(os.environ.get("THREADS_OPS_RAKUTEN_COMMISSION_PER_SALE", "300.0"))
