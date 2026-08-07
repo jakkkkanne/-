@@ -1,4 +1,4 @@
-from threads_ops import strategy
+from threads_ops import config, draft, strategy
 from threads_ops.models import MarketingPlan, ResearchReport
 
 
@@ -121,3 +121,49 @@ def test_build_weekly_calendar_excludes_product_outside_price_band():
     slot = calendar[0]
     assert slot["product_name"] is None
     assert "見送り" in slot["notes"]
+
+
+def _product_with_insight():
+    return {
+        "pain_point": "夜泣き",
+        "name": "ホワイトノイズマシン",
+        "price_jpy": 3480,
+        "review_count": 4200,
+        "review_insight": {
+            "pain": "抱っこしても寝てもすぐ起きて夜中に何度も起こされる",
+            "resolution": "ホワイトノイズを流すようにしたら寝つきと寝続ける時間が伸びた",
+        },
+    }
+
+
+def test_build_product_thread_has_three_segments_in_order():
+    segments = strategy.build_product_thread(_product_with_insight())
+    assert len(segments) == 3
+    hook, testimonial, solution = segments
+    assert "抱っこしても寝てもすぐ起きて夜中に何度も起こされる" in hook
+    assert "ホワイトノイズを流すようにしたら寝つきと寝続ける時間が伸びた" in solution
+    assert "[ホワイトノイズマシン]" in solution
+
+
+def test_build_product_thread_excludes_url_and_stays_within_char_budget():
+    segments = strategy.build_product_thread(_product_with_insight())
+    for segment in segments:
+        assert "http" not in segment
+        assert draft.visible_length(segment) <= config.THREADS_MAX_CHARS
+
+
+def test_build_product_thread_no_insight_returns_empty():
+    product = {"name": "テスト商品", "review_insight": {"pain": None, "resolution": None}}
+    assert strategy.build_product_thread(product) == []
+
+
+def test_build_product_threads_groups_by_genre_and_skips_missing_insight():
+    products = [
+        _product_with_insight(),
+        {"pain_point": "沐浴", "name": "沐浴チェア", "price_jpy": 2980, "review_insight": {}},
+    ]
+    threads = strategy.build_product_threads(products)
+    assert len(threads) == 1  # the second product has no usable insight
+    assert threads[0]["genre"] == "夜泣き"
+    assert threads[0]["product_name"] == "ホワイトノイズマシン"
+    assert len(threads[0]["segments"]) == 3

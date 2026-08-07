@@ -56,6 +56,38 @@ def predict_trending_format(report: ResearchReport) -> tuple[str | None, str | N
     return predicted_type, resonant_type, rationale
 
 
+def analyze_product_reviews(product: dict) -> dict:
+    """ハル's read on one product's reviews: the primary pain -> resolution story.
+
+    `product` is shaped like affiliate.recommend_in_price_range()'s return
+    value (needs "reviews"/"name"/"review_count"). The curated review list
+    is already ordered by representativeness, so the first entry is used
+    as the lead angle for カイ's thread; the rest stay available as
+    alternate angles.
+    """
+    reviews = product.get("reviews", [])
+    if not reviews:
+        return {
+            "pain": None,
+            "resolution": None,
+            "insight": f"{product.get('name', 'この商品')}の口コミデータがまだありません。",
+            "alternate_reviews": [],
+        }
+    primary = reviews[0]
+    insight = f"「{primary['pain']}」という悩みが「{primary['resolution']}」で解決された、という声が中心。"
+    return {
+        "pain": primary["pain"],
+        "resolution": primary["resolution"],
+        "insight": insight,
+        "alternate_reviews": reviews[1:],
+    }
+
+
+def analyze_products(products: list[dict]) -> list[dict]:
+    """Batch version: attach ハル's review_insight to each product, unchanged otherwise."""
+    return [{**product, "review_insight": analyze_product_reviews(product)} for product in products]
+
+
 def build_marketing_plan(report: ResearchReport) -> MarketingPlan:
     if config.WEEKLY_POST_TARGET_OVERRIDE is not None:
         # An explicit business decision (e.g. "42 posts/week") wins over the

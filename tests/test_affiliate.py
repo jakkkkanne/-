@@ -60,3 +60,21 @@ def test_recommend_in_price_range_uses_config_defaults(monkeypatch):
 
 def test_recommend_in_price_range_unknown_pain_point_returns_none():
     assert affiliate.recommend_in_price_range("存在しない悩み", 2000, 6000) is None
+
+
+def test_recommend_in_price_range_includes_reviews():
+    result = affiliate.recommend_in_price_range("夜泣き", 2000, 6000)
+    assert result["review_count"] > 0
+    assert result["reviews"]
+    assert "pain" in result["reviews"][0] and "resolution" in result["reviews"][0]
+
+
+def test_products_in_price_range_sorted_by_review_count_desc():
+    products = affiliate.products_in_price_range(1500, 10000)
+    assert products  # non-empty for this band
+    review_counts = [p["review_count"] for p in products]
+    assert review_counts == sorted(review_counts, reverse=True)
+    # 気持ちが学べる絵本 (1200円) and 食洗機 (25000円) are out of this band
+    names = {p["name"] for p in products}
+    assert "気持ちが学べる絵本" not in names
+    assert "食洗機" not in names

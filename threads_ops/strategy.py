@@ -7,7 +7,7 @@ is what the secretary department hands to the draft stage.
 
 from __future__ import annotations
 
-from . import affiliate, config, storage
+from . import affiliate, config, draft, storage
 from .models import MarketingPlan, ResearchReport, StrategyPlan, now_iso
 
 AGENT_NAME = "カイ"  # 戦略部門担当
@@ -135,6 +135,81 @@ def build_weekly_calendar(
             )
 
     return calendar
+
+
+_HOOK_TEMPLATES = [
+    "「{pain}」、共感しかない…って人、地味に多い気がする。",
+    "「{pain}」で悩んでるの、私だけじゃないですよね?",
+    "「{pain}」、これ分かる人にしか分からない辛さだと思う。",
+    "「{pain}」って、地味にじわじわくるやつ。",
+]
+
+_TESTIMONIAL_TEMPLATES = [
+    "うちも毎日そんな感じで、心も体もヘトヘトだった時期があって。\n特効薬なんてないと思ってたんだけど、あるものを試してから変わったんだよね。",
+    "私も正直、心が折れかけてた。\n「これはもう仕方ない」って諦めかけてたんだけど、ふと試してみたことがあって。",
+    "毎日それでクタクタで、誰に聞いても「そのうち楽になるよ」しか言われなくて。\nでも、たまたま知ったことがきっかけで変わったんだよね。",
+    "同じ悩みの人、周りにも結構いた。\nみんな我慢するしかないと思ってたけど、実はそうでもなかったんだよね。",
+]
+
+
+def build_product_thread(product: dict, variant_index: int = 0) -> list[str]:
+    """カイ's フック(hook) -> 体験談(testimonial) -> 解決法(solution) thread for one product.
+
+    `product` must have ハル's `review_insight` attached (see
+    marketing.analyze_products) with "pain"/"resolution" keys; products
+    without a usable insight return an empty list (nothing to build from).
+    Tone is friend-to-friend throughout, per operator direction -- no
+    lecturing, no "you should," just "this is what worked for me." The
+    product name is embedded as [商品名] (never a URL) in the final
+    segment; draft.visible_length excludes it from the 500-char budget,
+    consistent with how the rest of the pipeline treats bracketed tags.
+
+    variant_index cycles through a small pool of hook/testimonial phrasings
+    so a batch of threads (see build_product_threads) doesn't read as the
+    same post copy-pasted with the noun swapped out.
+    """
+    insight = product.get("review_insight") or {}
+    pain = insight.get("pain")
+    resolution = insight.get("resolution")
+    if not pain or not resolution:
+        return []
+
+    hook = _HOOK_TEMPLATES[variant_index % len(_HOOK_TEMPLATES)].format(pain=pain)
+    testimonial = _TESTIMONIAL_TEMPLATES[variant_index % len(_TESTIMONIAL_TEMPLATES)]
+    solution = (
+        f"{resolution}。\n\n"
+        f"使ったのは[{product['name']}]。\n"
+        "同じように悩んでる人がいたら、無理しすぎずに一度試してみてほしいな。"
+    )
+    return [draft.truncate_to_limit(segment, config.THREADS_MAX_CHARS) for segment in (hook, testimonial, solution)]
+
+
+def build_product_threads(products: list[dict]) -> list[dict]:
+    """Batch version of build_product_thread, grouped/tagged by genre (pain_point).
+
+    `products` should already carry ハル's review_insight (see
+    marketing.analyze_products) and レン's price filtering (see
+    affiliate.products_in_price_range) -- this function doesn't re-check
+    price, it just builds the thread copy. Products with no usable review
+    insight are skipped rather than shipping an empty thread. Each product
+    gets a different variant_index so hook/testimonial phrasing varies
+    across the batch.
+    """
+    threads = []
+    for variant_index, product in enumerate(products):
+        segments = build_product_thread(product, variant_index=variant_index)
+        if not segments:
+            continue
+        threads.append(
+            {
+                "genre": product.get("pain_point", "その他"),
+                "product_name": product["name"],
+                "price_jpy": product["price_jpy"],
+                "review_count": product.get("review_count", 0),
+                "segments": segments,
+            }
+        )
+    return threads
 
 
 def build_strategy_plan(report: ResearchReport, marketing_plan: MarketingPlan) -> StrategyPlan:

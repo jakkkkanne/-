@@ -79,3 +79,47 @@ def test_run_company_loop_runs_bounded_iterations_without_real_sleep(tmp_dirs):
 
     company_files = list(tmp_dirs["secretary"].glob("*.json"))
     assert len(company_files) == 3
+
+
+def test_qa_check_thread_passes_clean_thread():
+    segments = [
+        "「夜泣きで何度も起きる」って、共感しかない。",
+        "うちも毎日そんな感じで、\nヘトヘトだった時期があって。",
+        "音を流したら改善した。\n\n使ったのは[ホワイトノイズマシン]。",
+    ]
+    assert secretary.qa_check_thread(segments) == []
+
+
+def test_qa_check_thread_flags_mixed_tone():
+    segments = [
+        "「夜泣きで何度も起きる」って、共感しかない。",
+        "本当に大変でした。\nご不便をおかけしました。",
+    ]
+    issues = secretary.qa_check_thread(segments)
+    assert any("トーン" in issue for issue in issues)
+
+
+def test_qa_check_thread_flags_mechanical_problems():
+    segments = ["これは  変です。。\n[未閉じの括弧"]
+    issues = secretary.qa_check_thread(segments)
+    assert any("連続した空白" in i for i in issues)
+    assert any("句読点が連続" in i for i in issues)
+    assert any("[]の対応" in i for i in issues)
+
+
+def test_qa_check_thread_empty_segments_flagged():
+    assert secretary.qa_check_thread([]) == ["セグメントが空です。"]
+
+
+def test_qa_check_threads_batch_only_includes_flagged():
+    clean = {
+        "product_name": "商品A",
+        "segments": ["フック文だよ。", "体験談だった。\n\n続き。", "解決策[商品A]。"],
+    }
+    dirty = {
+        "product_name": "商品B",
+        "segments": ["これは  変です。"],
+    }
+    flagged = secretary.qa_check_threads([clean, dirty])
+    assert "商品B" in flagged
+    assert "商品A" not in flagged

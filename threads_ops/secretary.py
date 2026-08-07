@@ -17,6 +17,56 @@ from .models import CompanyReport, now_iso
 
 AGENT_NAME = "ミナ"  # 秘書部門担当(各部門を統括)
 
+_POLITE_MARKERS = ("です。", "ます。", "でした。", "ください。")
+
+
+def qa_check_thread(segments: list[str]) -> list[str]:
+    """ミナ's pre-delivery checklist for one thread: typos, tone, readability.
+
+    Returns human-readable issues found (empty list = passed). This is a
+    mechanical safety net -- doubled punctuation, unbalanced [brackets],
+    stray whitespace, a polite segment breaking an otherwise casual
+    thread, a wall of text with no line breaks -- not a substitute for
+    actually reading the copy, which ミナ (and the operator) still does
+    before delivery.
+    """
+    issues: list[str] = []
+    if not segments:
+        return ["セグメントが空です。"]
+
+    casual_count = sum(1 for s in segments if not any(m in s for m in _POLITE_MARKERS))
+    if 0 < casual_count < len(segments):
+        issues.append("敬体(です/ます)とカジュアルな口調が混在しています。トーンを統一してください。")
+
+    for i, segment in enumerate(segments, start=1):
+        if segment != segment.strip():
+            issues.append(f"セグメント{i}: 前後に余分な空白/改行があります。")
+        if "  " in segment:
+            issues.append(f"セグメント{i}: 連続した空白があります。")
+        if "。。" in segment or "、、" in segment:
+            issues.append(f"セグメント{i}: 句読点が連続しています。")
+        if segment.count("[") != segment.count("]"):
+            issues.append(f"セグメント{i}: []の対応が取れていません。")
+        if draft.visible_length(segment) > config.THREADS_MAX_CHARS:
+            issues.append(f"セグメント{i}: 文字数が上限を超えています({draft.visible_length(segment)}文字)。")
+        if len(segment) > 80 and "\n" not in segment:
+            issues.append(f"セグメント{i}: 改行がなく読みにくい可能性があります。")
+
+    return issues
+
+
+def qa_check_threads(threads: list[dict]) -> dict[str, list[str]]:
+    """Batch qa_check_thread over カイ's product threads, keyed by product_name.
+
+    Only entries with at least one issue are included.
+    """
+    flagged = {}
+    for thread in threads:
+        issues = qa_check_thread(thread["segments"])
+        if issues:
+            flagged[thread["product_name"]] = issues
+    return flagged
+
 
 def run_company_cycle(topic_count: int = 3, drafts_per_topic: int = 2) -> tuple[CompanyReport, str]:
     config.ensure_dirs()

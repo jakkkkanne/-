@@ -4,17 +4,20 @@ Threads (Meta) の運用を、複数SNS展開(X・Threads・Instagram・note)を
 「運用会社」の第一弾として自動化するパイプラインです。会社は5部門で構成されます。
 
 **現在の運用方針:** ジャンルは子育て(あるある・困りごと・解決法)に特化し、
-閲覧数1万以上の競合投稿の「型」を分析して再現しつつ、「解決法」投稿に楽天
-アフィリエイトの商品リンクを添えて収益化します。投稿頻度は週42件(1日6投稿)を
-公式カデンスとして運用します(`.env` の `THREADS_OPS_WEEKLY_POST_TARGET`)。
+閲覧数1万以上の競合投稿の「型」を分析して再現しつつ、商品ごとにツリー(スレッド)
+投稿を作って収益化します。投稿頻度は週42件(1日6投稿)を公式カデンスとして運用します
+(`.env` の `THREADS_OPS_WEEKLY_POST_TARGET`)。商品は楽天アフィリエイトの価格帯
+1500〜10000円のものに絞り、投稿本文には URL ではなく `[商品名]` の角括弧表記のみを
+使います。**投稿は自動publishせず、必ず運用者本人が内容を確認したうえで手動で
+投稿します**(`THREADS_OPS_PUBLISHER` は既定で `mock` のままにしています)。
 
 | 部門 | 担当 | 役割 | 対応モジュール |
 | --- | --- | --- | --- |
-| リサーチ部門 | アヤ | 競合投稿を分析しレポート化。閲覧数1万以上・文章のみの投稿を「バイラル投稿」として型(あるある/困りごと/解決法)ごとに分析し、曜日x時間帯ごとの反応も集計 | `research.py` |
-| マーケティング部門 | ハル | レポートから投稿トーン・頻度・ハッシュタグ戦略を立案し、アヤのデータから今後伸びる型・ターゲット層に刺さる型を予測 | `marketing.py` |
-| 戦略部門 | カイ | コンテンツの柱・優先トピック・KPI目標を決定し、曜日x時間帯ごとの投稿カレンダー(型・トピック・商品名・戦略備考)を作成 | `strategy.py` |
-| 収益管理部門 | レン | KPI目標と投稿実績から週次の見込み利益(エンゲージメント・フォロワー・楽天アフィリエイト)を試算し、アフィリエイト商品の価格帯を管理 | `finance.py` / `affiliate.py` |
-| 秘書部門 | ミナ | 上記4部門を統括し、下書き生成まで一括実行してレポートを作成(定期自動実行も可) | `secretary.py` |
+| リサーチ部門 | アヤ | 競合投稿を分析しレポート化。閲覧数1万以上・文章のみの投稿を「バイラル投稿」として型(あるある/困りごと/解決法)ごとに分析し、曜日x時間帯ごとの反応も集計。将来的に楽天ランキングAPIから商品データを取得する経路も用意(現状未稼働) | `research.py` / `rakuten_ranking.py` |
+| マーケティング部門 | ハル | レポートから投稿トーン・頻度・ハッシュタグ戦略を立案し、アヤのデータから今後伸びる型・ターゲット層に刺さる型を予測。商品の口コミから悩み→解決のストーリーを分析 | `marketing.py` |
+| 戦略部門 | カイ | コンテンツの柱・優先トピック・KPI目標を決定し、曜日x時間帯ごとの投稿カレンダーを作成。商品ごとに「冒頭フック→体験談→解決法」のツリー投稿下書きも作成 | `strategy.py` |
+| 収益管理部門 | レン | KPI目標と投稿実績から週次の見込み利益を試算し、アフィリエイト商品の価格帯(現在1500〜10000円)を管理 | `finance.py` / `affiliate.py` |
+| 秘書部門 | ミナ | 上記4部門を統括し、下書き生成まで一括実行してレポートを作成。納品前に誤字脱字・トーン統一・可読性の最終チェックも行う | `secretary.py` |
 
 各部門の担当名は対応モジュールの `AGENT_NAME` で定義されており、CLI実行時の出力や
 秘書部門の `CompanyReport.department_summaries` にも表示されます。
@@ -123,9 +126,10 @@ python -m threads_ops publish
 
 `data/drafts/approved/` にある下書きのみを対象に投稿します。既定 (`THREADS_OPS_PUBLISHER=mock`)
 ではネットワーク呼び出しを一切行わず、投稿内容と結果を `data/drafts/history.jsonl` に記録するだけです。
-実際に投稿するには `.env` で `THREADS_OPS_PUBLISHER=real` にし、`THREADS_ACCESS_TOKEN` /
-`THREADS_USER_ID` を設定してください(Meta の [Threads API](https://developers.facebook.com/docs/threads)
-のセットアップが別途必要です)。
+Threads APIを使った自動投稿(`THREADS_OPS_PUBLISHER=real` + `THREADS_ACCESS_TOKEN` /
+`THREADS_USER_ID`)も実装はされていますが、**現在の運用方針では使用しません**。
+投稿は運用者本人が下書きを確認したうえで、Threadsアプリから手動で行ってください
+(このリポジトリの `.env` は既定で `mock` のままにしています)。
 
 ### まとめて実行
 
@@ -197,11 +201,52 @@ python -m threads_ops finance
 商品は投稿前に選定してください。
 
 **価格帯フィルタ:** `.env` の `THREADS_OPS_AFFILIATE_MIN_PRICE_JPY` /
-`THREADS_OPS_AFFILIATE_MAX_PRICE_JPY`(現在は 2000〜6000円)を設定すると、
+`THREADS_OPS_AFFILIATE_MAX_PRICE_JPY`(現在は 1500〜10000円)を設定すると、
 `affiliate.recommend_in_price_range(pain_point)` がその価格帯内の商品だけを返します。
 戦略部門(カイ)の週間カレンダーもこの価格帯を使って商品を選ぶため、価格帯外の
-商品(例: 食洗機のような高額品、絵本のような低額品)は自動的に商品提案から除外されます
+商品(例: 食洗機のような高額品)は自動的に商品提案から除外されます
 (投稿の型自体は作られ、`notes` に「該当価格帯の商品なし」と記録されます)。
+
+**口コミ数・口コミ内容:** `affiliate.PRODUCT_CATALOG` の各商品には `review_count`
+(口コミ数)と `reviews`(悩み→解決の例)も入っています。これらは手動キュレーションの
+サンプルデータです。楽天・Amazonの実際のランキング/口コミを自動取得する仕組みは
+まだ動いていません(下記「商品ツリー投稿」参照)。`affiliate.products_in_price_range()`
+で価格帯内の商品を口コミ数が多い順に取得できます。
+
+### 商品ツリー投稿(アヤ→ハル→カイ→レン→ミナ)
+
+競合の投稿を分析する通常のリサーチとは別に、**商品ごとにツリー(スレッド)投稿を
+作るワークフロー**があります。
+
+```python
+from threads_ops import affiliate, config, marketing, secretary, strategy
+
+products = affiliate.products_in_price_range(config.AFFILIATE_MIN_PRICE_JPY, config.AFFILIATE_MAX_PRICE_JPY)  # レン: 価格帯フィルタ、口コミ数順
+analyzed = marketing.analyze_products(products)  # ハル: 商品ごとに口コミから悩み→解決を分析
+threads = strategy.build_product_threads(analyzed)  # カイ: 冒頭フック→体験談→解決法のツリー下書きを作成
+flagged = secretary.qa_check_threads(threads)  # ミナ: 誤字脱字・トーン統一・可読性の最終チェック
+```
+
+各スレッドは3投稿(`segments`)で構成されます:
+
+1. **冒頭フック** -- 悩みへの共感を引く一文
+2. **体験談** -- 「私も/うちも」で始まる、友達に語りかけるトーンの経験談
+3. **解決法** -- 悩みがどう解決したかと `[商品名]`(URLではなく商品名のみ)
+
+`draft.visible_length()` は `[...]` で囲まれた部分を文字数カウントから除外するため、
+`[商品名]` が入っていても投稿の実質文字数(500文字)判定には影響しません。
+`secretary.qa_check_thread()` は、敬体とカジュアル口調の混在・連続した空白や句読点・
+`[]` の対応漏れ・改行のない長文などを機械的にチェックします(誤字脱字そのものの完全な
+自動検出はできないため、最終的な確認は人が行ってください)。
+
+**アヤの本来の指示(楽天・Amazonの現在の上位60位を口コミ数順に取得)は実行できて
+いません。** 楽天のランキングAPI(`app.rakuten.co.jp`)はこの実行環境のネットワーク
+ポリシーでブロックされており、加えて呼び出しには別途「楽天アプリID」
+(`RAKUTEN_APPLICATION_ID`、アフィリエイトIDとは別物)が必要です。Amazonには実用的な
+ランキング取得APIが存在しません。`rakuten_ranking.py` に楽天のランキングAPIを呼ぶ
+コードは用意していますが、**未検証**です(ネットワーク許可とアプリIDが揃った環境で、
+最新のAPI仕様と突き合わせてから使ってください)。それまでは
+`affiliate.PRODUCT_CATALOG` の手動キュレーションデータで代替しています。
 
 ### 秘書部門(会社を一括運用)
 
@@ -245,12 +290,14 @@ threads_ops/       パイプライン本体
   config.py         環境変数ベースの設定
   models.py         CompetitorPost / ResearchReport / MarketingPlan / StrategyPlan / RevenueReport / CompanyReport / Draft
   research.py        [リサーチ部門] 競合データ分析
-  marketing.py        [マーケティング部門] トーン・頻度・ハッシュタグ戦略の立案
-  strategy.py          [戦略部門] コンテンツの柱・優先トピック・KPI目標の決定
+  rakuten_ranking.py    楽天ランキングAPIクライアント(未検証・現状ネットワーク遮断で未稼働)
+  marketing.py        [マーケティング部門] トーン・頻度・ハッシュタグ戦略の立案、口コミ分析、型の予測
+  strategy.py          [戦略部門] コンテンツの柱・優先トピック・KPI目標の決定、商品ツリー投稿の作成
   finance.py            [収益管理部門] KPI目標と投稿実績から見込み利益を試算
-  affiliate.py           楽天アフィリエイト: 困りごと→商品カテゴリ→リンク生成
-  secretary.py            [秘書部門] 各部門を統括して一括実行(定期ループ対応)し会社レポートを作成
-  draft.py            下書き生成 (テンプレート / Anthropic、マーケティングプランのトーンを反映)
+  affiliate.py           楽天アフィリエイト: 困りごと→商品カテゴリ(価格・口コミ含む)→リンク生成
+  secretary.py            [秘書部門] 各部門を統括して一括実行(定期ループ対応)し、QAチェックも担当
+  draft.py            下書き生成 (テンプレート / Anthropic、マーケティングプランのトーンを反映)。
+                        visible_length/truncate_to_limit で [商品名] 表記を文字数から除外
   approval.py       CLI 承認フロー
   publish.py         投稿 (Mock / 実 API)
   cli.py            コマンド群

@@ -11,15 +11,29 @@ available:
 
 from __future__ import annotations
 
+import re
 import textwrap
 from typing import Protocol
 
 from . import config, storage
 from .models import Draft, MarketingPlan, ResearchReport, now_iso
 
+_BRACKET_RE = re.compile(r"\[[^\[\]]*\]")
 
-def _truncate(text: str, limit: int) -> str:
-    if len(text) <= limit:
+
+def visible_length(text: str) -> int:
+    """Character count Threads' limit actually applies to.
+
+    Per operator direction, a [商品名] product-name tag doesn't count
+    against the post's character budget -- callers strip it, or replace it
+    with the real product name, before actually posting; it's bracketed
+    precisely so it reads as "not body copy."
+    """
+    return len(_BRACKET_RE.sub("", text))
+
+
+def truncate_to_limit(text: str, limit: int) -> str:
+    if visible_length(text) <= limit:
         return text
     return text[: limit - 1].rstrip() + "…"
 
@@ -103,7 +117,7 @@ class TemplateDraftGenerator:
                 body_bits.append("施策: " + tactics[i % len(tactics)])
             body = "\n".join(body_bits) if body_bits else "参考になるデータがまだ十分ではありません。"
             text = "\n\n".join([opener, body, closer])
-            drafts.append(_truncate(text, config.THREADS_MAX_CHARS))
+            drafts.append(truncate_to_limit(text, config.THREADS_MAX_CHARS))
         return drafts
 
 

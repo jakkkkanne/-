@@ -84,3 +84,31 @@ def test_build_marketing_plan_includes_trend_prediction():
     assert plan.predicted_trending_type == "解決法"
     assert plan.target_resonant_type == "解決法"
     assert plan.trend_rationale
+
+
+def test_analyze_product_reviews_picks_primary_review():
+    product = {
+        "name": "ホワイトノイズマシン",
+        "reviews": [
+            {"pain": "夜泣きで眠れない", "resolution": "音を流したら改善した"},
+            {"pain": "対応で夫婦とも限界", "resolution": "タイマーで負担が減った"},
+        ],
+    }
+    insight = marketing.analyze_product_reviews(product)
+    assert insight["pain"] == "夜泣きで眠れない"
+    assert insight["resolution"] == "音を流したら改善した"
+    assert len(insight["alternate_reviews"]) == 1
+    assert "夜泣きで眠れない" in insight["insight"]
+
+
+def test_analyze_product_reviews_handles_no_reviews():
+    insight = marketing.analyze_product_reviews({"name": "テスト商品", "reviews": []})
+    assert insight["pain"] is None
+    assert "テスト商品" in insight["insight"]
+
+
+def test_analyze_products_batch_attaches_insight():
+    products = [{"name": "A", "reviews": [{"pain": "p1", "resolution": "r1"}]}]
+    analyzed = marketing.analyze_products(products)
+    assert analyzed[0]["name"] == "A"
+    assert analyzed[0]["review_insight"]["pain"] == "p1"

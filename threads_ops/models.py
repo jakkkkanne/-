@@ -184,12 +184,16 @@ class CompanyReport:
 class Draft:
     id: str
     topic: str
-    text: str
+    text: str  # first segment, kept for backward compatibility / single-post display
     created_at: str
     status: str  # pending | approved | rejected | posted
     source_report: str | None = None
     generator: str = "template"
     note: str | None = None
+    # ツリー投稿(thread): ordered post segments, e.g. [冒頭フック, 体験談, 解決法].
+    # Empty for a plain single-post draft; when non-empty, text == segments[0].
+    segments: list[str] = field(default_factory=list)
+    product_name: str | None = None  # bracketed [商品名] shown in a 解決法 segment, if any
 
     def to_dict(self) -> dict:
         return asdict(self)
