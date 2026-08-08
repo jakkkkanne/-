@@ -2,6 +2,10 @@
 
 Threads (Meta) の運用フローを自動化するパイプラインです。
 
+> Threads 以外のプラットフォームでの収益自動化については、実装前の設計提案を
+> [`docs/revenue-automation-design.md`](docs/revenue-automation-design.md) にまとめています。
+> 対象プラットフォームや収益化手段など、意思決定が必要な論点も記載しています。
+
 ```
 リサーチ(競合分析) → 下書き生成 → 人による承認(CLI) → 投稿
 ```
