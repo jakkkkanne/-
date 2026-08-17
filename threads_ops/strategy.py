@@ -168,6 +168,69 @@ _TESTIMONIAL_TEMPLATES = [
 ]
 
 
+# あるある framing for the 2-segment variant below -- same real-account
+# voice as _HOOK_TEMPLATES, but names the shared-experience format
+# explicitly ("あるある"), matching how the operator's own posts often
+# label a relatable situation before the payoff.
+_ARARU_HOOK_TEMPLATES = [
+    "「{pain}」\n\nこれ、育児あるあるだと思う。\n\nわかる人にしかわからない辛さ。",
+    "{pain}\n\nこれもう、あるあるすぎない?",
+    "「{pain}」\n\n育児してたら絶対通る道だよね。",
+    "{pain}\n\n地味にしんどいやつ。\n育児あるある選手権あったら\n絶対入賞してると思う。",
+]
+
+
+def _build_solution_segment(product: dict, resolution: str) -> str:
+    return (
+        f"{resolution}。\n\n"
+        f"使ったのは[{product['name']}]。\n\n"
+        "同じように悩んでる人がいたら、\n無理しすぎずに一度試してみてほしいな🙏"
+    )
+
+
+def build_araru_resolution_thread(product: dict, variant_index: int = 0) -> list[str]:
+    """カイ's 2-segment あるある(relatable situation) -> 解決法(solution) thread.
+
+    Shorter than build_product_thread's 3-segment フック->体験談->解決法: no
+    separate testimonial beat, just the shared-experience opener straight
+    into what fixed it. Same real-account tone (see the comment above
+    _HOOK_TEMPLATES), same [商品名] bracket convention for the product.
+    """
+    insight = product.get("review_insight") or {}
+    pain = insight.get("pain")
+    resolution = insight.get("resolution")
+    if not pain or not resolution:
+        return []
+
+    araru = _ARARU_HOOK_TEMPLATES[variant_index % len(_ARARU_HOOK_TEMPLATES)].format(pain=pain)
+    solution = _build_solution_segment(product, resolution)
+    return [draft.truncate_to_limit(segment, config.THREADS_MAX_CHARS) for segment in (araru, solution)]
+
+
+def build_araru_resolution_threads(products: list[dict]) -> list[dict]:
+    """Batch version of build_araru_resolution_thread, grouped/tagged by genre (pain_point).
+
+    Same contract as build_product_threads: products need review_insight
+    already attached, products with no usable insight are skipped, and
+    each product gets a different variant_index for phrasing variety.
+    """
+    threads = []
+    for variant_index, product in enumerate(products):
+        segments = build_araru_resolution_thread(product, variant_index=variant_index)
+        if not segments:
+            continue
+        threads.append(
+            {
+                "genre": product.get("pain_point", "その他"),
+                "product_name": product["name"],
+                "price_jpy": product["price_jpy"],
+                "review_count": product.get("review_count", 0),
+                "segments": segments,
+            }
+        )
+    return threads
+
+
 def build_product_thread(product: dict, variant_index: int = 0) -> list[str]:
     """カイ's フック(hook) -> 体験談(testimonial) -> 解決法(solution) thread for one product.
 
@@ -194,11 +257,7 @@ def build_product_thread(product: dict, variant_index: int = 0) -> list[str]:
 
     hook = _HOOK_TEMPLATES[variant_index % len(_HOOK_TEMPLATES)].format(pain=pain)
     testimonial = _TESTIMONIAL_TEMPLATES[variant_index % len(_TESTIMONIAL_TEMPLATES)]
-    solution = (
-        f"{resolution}。\n\n"
-        f"使ったのは[{product['name']}]。\n\n"
-        "同じように悩んでる人がいたら、\n無理しすぎずに一度試してみてほしいな🙏"
-    )
+    solution = _build_solution_segment(product, resolution)
     return [draft.truncate_to_limit(segment, config.THREADS_MAX_CHARS) for segment in (hook, testimonial, solution)]
 
 

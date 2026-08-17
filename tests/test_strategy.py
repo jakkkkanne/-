@@ -167,3 +167,36 @@ def test_build_product_threads_groups_by_genre_and_skips_missing_insight():
     assert threads[0]["genre"] == "夜泣き"
     assert threads[0]["product_name"] == "ホワイトノイズマシン"
     assert len(threads[0]["segments"]) == 3
+
+
+def test_build_araru_resolution_thread_has_two_segments_in_order():
+    segments = strategy.build_araru_resolution_thread(_product_with_insight())
+    assert len(segments) == 2
+    araru, solution = segments
+    assert "抱っこしても寝てもすぐ起きて夜中に何度も起こされる" in araru
+    assert "ホワイトノイズを流すようにしたら寝つきと寝続ける時間が伸びた" in solution
+    assert "[ホワイトノイズマシン]" in solution
+
+
+def test_build_araru_resolution_thread_excludes_url_and_stays_within_char_budget():
+    segments = strategy.build_araru_resolution_thread(_product_with_insight())
+    for segment in segments:
+        assert "http" not in segment
+        assert draft.visible_length(segment) <= config.THREADS_MAX_CHARS
+
+
+def test_build_araru_resolution_thread_no_insight_returns_empty():
+    product = {"name": "テスト商品", "review_insight": {"pain": None, "resolution": None}}
+    assert strategy.build_araru_resolution_thread(product) == []
+
+
+def test_build_araru_resolution_threads_groups_by_genre_and_skips_missing_insight():
+    products = [
+        _product_with_insight(),
+        {"pain_point": "沐浴", "name": "沐浴チェア", "price_jpy": 2980, "review_insight": {}},
+    ]
+    threads = strategy.build_araru_resolution_threads(products)
+    assert len(threads) == 1  # the second product has no usable insight
+    assert threads[0]["genre"] == "夜泣き"
+    assert threads[0]["product_name"] == "ホワイトノイズマシン"
+    assert len(threads[0]["segments"]) == 2
