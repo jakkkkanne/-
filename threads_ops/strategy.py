@@ -168,32 +168,48 @@ _TESTIMONIAL_TEMPLATES = [
 ]
 
 
-# あるある framing for the 2-segment variant below -- same real-account
-# voice as _HOOK_TEMPLATES, but names the shared-experience format
-# explicitly ("あるある"), matching how the operator's own posts often
-# label a relatable situation before the payoff.
-_ARARU_HOOK_TEMPLATES = [
-    "「{pain}」\n\nこれ、育児あるあるだと思う。\n\nわかる人にしかわからない辛さ。",
-    "{pain}\n\nこれもう、あるあるすぎない?",
-    "「{pain}」\n\n育児してたら絶対通る道だよね。",
-    "{pain}\n\n地味にしんどいやつ。\n育児あるある選手権あったら\n絶対入賞してると思う。",
+# 2-segment あるある->解決法 thread, restructured per operator direction:
+#   投稿1 = 冒頭フック(1-2行) + あるある(1-2行) + 2投稿目に誘う一言
+#   投稿2 = 解決法を詳しく + その後商品名
+# Same real-account voice as _HOOK_TEMPLATES (soft/friendly/friend-to-friend,
+# no である/ます, short \n-broken lines). variant_index picks one phrasing
+# from each pool together so a batch doesn't repeat.
+_HOOK_LINES = [
+    "「{pain}」",
+    "{pain}",
+    "「{pain}」って、\nない?",
+    "{pain}\n\nってこと、ない?",
 ]
 
+_ARARU_LINES = [
+    "これ、育児あるあるだと思う。\nわかる人にしかわからない辛さ。",
+    "これもう、あるあるすぎない?",
+    "育児してたら絶対通る道だよね。",
+    "地味にしんどいやつ。\n育児あるある選手権あったら絶対入賞してると思う。",
+]
 
-def _build_solution_segment(product: dict, resolution: str) -> str:
-    return (
-        f"{resolution}。\n\n"
-        f"使ったのは[{product['name']}]。\n\n"
-        "同じように悩んでる人がいたら、\n無理しすぎずに一度試してみてほしいな🙏"
-    )
+_INVITE_LINES = [
+    "実はこれ、ちゃんと解決できたから\n次の投稿で紹介するね🙏",
+    "この悩み、あっさり解決したから\n続きは次の投稿で話すね",
+    "諦めかけてたけど、\n解決法は次の投稿にまとめたよ",
+    "どうやって乗り越えたか、\n2投稿目に書いたから見てね",
+]
+
+_SOLUTION_INTROS = [
+    "実際にやってみたのはこれ。",
+    "私が試して効果があったのはこれ。",
+    "色々試した中で、一番効いたのがこれ。",
+    "同じ悩みの人に共有したいんだけど、",
+]
 
 
 def build_araru_resolution_thread(product: dict, variant_index: int = 0) -> list[str]:
     """カイ's 2-segment あるある(relatable situation) -> 解決法(solution) thread.
 
-    Shorter than build_product_thread's 3-segment フック->体験談->解決法: no
-    separate testimonial beat, just the shared-experience opener straight
-    into what fixed it. Same real-account tone (see the comment above
+    投稿1: 冒頭フック(1-2行) + あるある(1-2行) + 2投稿目に誘う一言。
+    投稿2: 解決法を詳しく(前置き+resolution+一言) + その後[商品名]。
+
+    Same real-account tone as build_product_thread (see the comment above
     _HOOK_TEMPLATES), same [商品名] bracket convention for the product.
     """
     insight = product.get("review_insight") or {}
@@ -202,9 +218,19 @@ def build_araru_resolution_thread(product: dict, variant_index: int = 0) -> list
     if not pain or not resolution:
         return []
 
-    araru = _ARARU_HOOK_TEMPLATES[variant_index % len(_ARARU_HOOK_TEMPLATES)].format(pain=pain)
-    solution = _build_solution_segment(product, resolution)
-    return [draft.truncate_to_limit(segment, config.THREADS_MAX_CHARS) for segment in (araru, solution)]
+    hook = _HOOK_LINES[variant_index % len(_HOOK_LINES)].format(pain=pain)
+    araru = _ARARU_LINES[variant_index % len(_ARARU_LINES)]
+    invite = _INVITE_LINES[variant_index % len(_INVITE_LINES)]
+    post1 = f"{hook}\n\n{araru}\n\n{invite}"
+
+    intro = _SOLUTION_INTROS[variant_index % len(_SOLUTION_INTROS)]
+    post2 = (
+        f"{intro}\n\n{resolution}。\n\n"
+        "それからは気持ちがだいぶ楽になったよ。\n\n"
+        f"使ったのは[{product['name']}]。\n\n"
+        "同じように悩んでる人がいたら、\n無理しすぎずに一度試してみてほしいな🙏"
+    )
+    return [draft.truncate_to_limit(segment, config.THREADS_MAX_CHARS) for segment in (post1, post2)]
 
 
 def build_araru_resolution_threads(products: list[dict]) -> list[dict]:
@@ -257,7 +283,11 @@ def build_product_thread(product: dict, variant_index: int = 0) -> list[str]:
 
     hook = _HOOK_TEMPLATES[variant_index % len(_HOOK_TEMPLATES)].format(pain=pain)
     testimonial = _TESTIMONIAL_TEMPLATES[variant_index % len(_TESTIMONIAL_TEMPLATES)]
-    solution = _build_solution_segment(product, resolution)
+    solution = (
+        f"{resolution}。\n\n"
+        f"使ったのは[{product['name']}]。\n\n"
+        "同じように悩んでる人がいたら、\n無理しすぎずに一度試してみてほしいな🙏"
+    )
     return [draft.truncate_to_limit(segment, config.THREADS_MAX_CHARS) for segment in (hook, testimonial, solution)]
 
 
