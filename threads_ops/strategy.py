@@ -137,18 +137,34 @@ def build_weekly_calendar(
     return calendar
 
 
+# Phrasing below is calibrated against the operator's own real Threads
+# account (162 text-only posts fetched via the Threads API and reviewed
+# directly) rather than invented from scratch -- per operator direction,
+# every future post must read like *that* account, not like generic
+# affiliate copy. Recurring, reproducible traits observed in the real
+# posts: short lines with frequent \n breaks (never a wall of text),
+# casual sentence endings (だよ/だよね/ぅー/〜な、no である/します), a
+# rhetorical question or shared-struggle opener that puts the reader and
+# the writer on the same side ("私だけじゃないよね?", "わかる人にしか
+# わからない"), and a closing line that invites rather than instructs --
+# never "したほうがいい" (you should), always "してみてほしいな" / a
+# question back to the reader. No lecturing tone, no polite/formal です・
+# ます markers (secretary.qa_check_thread would flag mixing those in
+# anyway), and a light single emoji at the very end of the closing line,
+# matching how the real account punctuates a thought rather than
+# decorating it.
 _HOOK_TEMPLATES = [
-    "「{pain}」、共感しかない…って人、地味に多い気がする。",
-    "「{pain}」で悩んでるの、私だけじゃないですよね?",
-    "「{pain}」、これ分かる人にしか分からない辛さだと思う。",
-    "「{pain}」って、地味にじわじわくるやつ。",
+    "「{pain}」\n\nこれ、わかる人にしか\nわからない辛さだと思う。",
+    "「{pain}」って、\n地味にじわじわくるやつ。",
+    "「{pain}」\n\n共感しかない…って人、\n地味に多い気がする。",
+    "「{pain}」で悩んでるの、\n私だけじゃないよね?",
 ]
 
 _TESTIMONIAL_TEMPLATES = [
-    "うちも毎日そんな感じで、心も体もヘトヘトだった時期があって。\n特効薬なんてないと思ってたんだけど、あるものを試してから変わったんだよね。",
-    "私も正直、心が折れかけてた。\n「これはもう仕方ない」って諦めかけてたんだけど、ふと試してみたことがあって。",
-    "毎日それでクタクタで、誰に聞いても「そのうち楽になるよ」しか言われなくて。\nでも、たまたま知ったことがきっかけで変わったんだよね。",
-    "同じ悩みの人、周りにも結構いた。\nみんな我慢するしかないと思ってたけど、実はそうでもなかったんだよね。",
+    "うちも毎日そんな感じで、\n心も体もヘトヘトだった時期があって。\n\n特効薬なんてないと思ってたんだけど、\nあるものを試してから変わったんだよね。",
+    "私も正直、心が折れかけてた。\n\n「これはもう仕方ない」って\n諦めかけてたんだけど、\nふと試してみたことがあって。",
+    "毎日それでクタクタで、\n誰に聞いても\n「そのうち楽になるよ」しか言われなくて。\n\nでも、たまたま知ったことがきっかけで\n変わったんだよね。",
+    "同じ悩みの人、周りにも結構いた。\n\nみんな我慢するしかないと\n思ってたけど、\n実はそうでもなかったんだよね。",
 ]
 
 
@@ -159,10 +175,12 @@ def build_product_thread(product: dict, variant_index: int = 0) -> list[str]:
     marketing.analyze_products) with "pain"/"resolution" keys; products
     without a usable insight return an empty list (nothing to build from).
     Tone is friend-to-friend throughout, per operator direction -- no
-    lecturing, no "you should," just "this is what worked for me." The
-    product name is embedded as [商品名] (never a URL) in the final
-    segment; draft.visible_length excludes it from the 500-char budget,
-    consistent with how the rest of the pipeline treats bracketed tags.
+    lecturing, no "you should," just "this is what worked for me," in the
+    same voice as the operator's own real account (see the module-level
+    comment above _HOOK_TEMPLATES). The product name is embedded as
+    [商品名] (never a URL) in the final segment; draft.visible_length
+    excludes it from the 500-char budget, consistent with how the rest of
+    the pipeline treats bracketed tags.
 
     variant_index cycles through a small pool of hook/testimonial phrasings
     so a batch of threads (see build_product_threads) doesn't read as the
@@ -178,8 +196,8 @@ def build_product_thread(product: dict, variant_index: int = 0) -> list[str]:
     testimonial = _TESTIMONIAL_TEMPLATES[variant_index % len(_TESTIMONIAL_TEMPLATES)]
     solution = (
         f"{resolution}。\n\n"
-        f"使ったのは[{product['name']}]。\n"
-        "同じように悩んでる人がいたら、無理しすぎずに一度試してみてほしいな。"
+        f"使ったのは[{product['name']}]。\n\n"
+        "同じように悩んでる人がいたら、\n無理しすぎずに一度試してみてほしいな🙏"
     )
     return [draft.truncate_to_limit(segment, config.THREADS_MAX_CHARS) for segment in (hook, testimonial, solution)]
 
