@@ -26,12 +26,24 @@ from . import config
 #
 # review_count / reviews are hand-curated stand-ins for real review mining.
 # アヤ was asked to pull live Rakuten/Amazon ranking + review data, but this
-# session can't reach either (network policy blocks app.rakuten.co.jp, and
-# there's no Amazon ranking API available at all -- see README). These are
-# illustrative example reviews for demonstrating ハル/カイ's pipeline, not
-# real customer feedback; replace with actually-mined reviews once the
-# Rakuten Ranking API (needs a Rakuten *Application* ID, separate from
-# RAKUTEN_AFFILIATE_ID) is reachable.
+# session can't reach either -- neither the ranking page (blocked by
+# Rakuten's own Akamai bot protection, same as the CLIENT_IP_NOT_ALLOWED
+# issue on the official API) nor a scrape. These are illustrative example
+# reviews for demonstrating ハル/カイ's pipeline, not real customer
+# feedback; replace with actually-mined reviews once the Rakuten Ranking
+# API (needs a Rakuten *Application* ID, separate from RAKUTEN_AFFILIATE_ID)
+# is reachable from a stable-IP environment.
+#
+# brand_candidates (per entry, where アヤ found any): rough brand/product
+# names surfaced via WebSearch as the current stand-in research method,
+# per operator direction. These are search-engine snippet fragments, NOT a
+# confirmed live ranking position, price, or review count -- WebFetch/curl
+# to the actual ranking page returns Rakuten's Akamai anti-bot block from
+# this environment, so there was no way to verify order or freshness.
+# Treat them only as "roughly worth checking," never as ready-to-publish
+# recommendations -- confirm on the real product page before using one to
+# replace an entry's `name`/`price_jpy`, and note entries where no
+# confident candidate turned up.
 PRODUCT_CATALOG: dict[str, dict] = {
     "夜泣き": {
         "name": "ホワイトノイズマシン",
@@ -42,6 +54,9 @@ PRODUCT_CATALOG: dict[str, dict] = {
             {"pain": "抱っこしても寝てもすぐ起きて夜中に何度も起こされる", "resolution": "ホワイトノイズを流すようにしたら寝つきと寝続ける時間が伸びた"},
             {"pain": "夫婦交代で対応しても寝不足が限界だった", "resolution": "タイマー機能で朝まで自動で流せて対応の負担が減った"},
         ],
+        # WebSearchでは具体的な機種名まで確度高く拾えなかった("レクトロファンマイクロ2"の
+        # 言及はあったが、価格・現在の順位は未確認)。
+        "brand_candidates": [],
     },
     "寝かしつけ": {
         "name": "スワドルおくるみ",
@@ -52,6 +67,7 @@ PRODUCT_CATALOG: dict[str, dict] = {
             {"pain": "布団に置いた瞬間に手足が動いて起きてしまう", "resolution": "おくるみで包むとモロー反射が抑えられて置いても起きにくくなった"},
             {"pain": "毎回同じ体勢で寝かしつけるのに時間がかかっていた", "resolution": "着せるだけで入眠の合図になり寝かしつけ時間が短縮した"},
         ],
+        "brand_candidates": ["BRILBE(参考価格1,950円・参考レビュー12,166件)", "MARYPLUS マリープラス(参考価格1,990円〜・参考レビュー4,620件)"],
     },
     "離乳食": {
         "name": "離乳食調理セット",
@@ -62,6 +78,9 @@ PRODUCT_CATALOG: dict[str, dict] = {
             {"pain": "毎食すりつぶしたり裏ごししたりする手間が負担だった", "resolution": "1つの器具で潰す・こす・すりおろすができて調理時間が半分になった"},
             {"pain": "少量ずつしか作れず毎回洗い物が増えていた", "resolution": "まとめて作って冷凍保存する運用に切り替えられた"},
         ],
+        # 見つかったのは保存容器・製氷皿など周辺グッズで、この項目の「潰す/こす/すりおろす
+        # 一体型調理器具」とは商品カテゴリが一致しないため候補には入れていない。
+        "brand_candidates": [],
     },
     "イヤイヤ期": {
         "name": "気持ちが学べる絵本",
@@ -71,6 +90,7 @@ PRODUCT_CATALOG: dict[str, dict] = {
         "reviews": [
             {"pain": "癇癪を起こした時にどう声をかけていいか分からなかった", "resolution": "絵本の言葉を借りて気持ちを代弁できるようになった"},
         ],
+        "brand_candidates": [],
     },
     "お出かけ": {
         "name": "抱っこ紐",
@@ -81,6 +101,10 @@ PRODUCT_CATALOG: dict[str, dict] = {
             {"pain": "長時間の抱っこで腰と肩が限界だった", "resolution": "腰ベルトタイプに替えてから外出のハードルが下がった"},
             {"pain": "着脱に時間がかかって外出前にぐずられることが多かった", "resolution": "ワンタッチバックルで装着時間が短くなった"},
         ],
+        # べべスワン(参考35,000円〜)/ベビービョルン ハーモニー(参考27,280円〜)/
+        # ポルバン アドバンス ヒップシート(参考11,000円〜)は3件ともレンの価格帯
+        # (1500〜10000円)を超えるため候補から除外。
+        "brand_candidates": [],
     },
     "授乳": {
         "name": "授乳クッション",
@@ -90,6 +114,7 @@ PRODUCT_CATALOG: dict[str, dict] = {
         "reviews": [
             {"pain": "授乳のたびに腕と腰が痛くなっていた", "resolution": "クッションで高さが安定し授乳中の負担が減った"},
         ],
+        "brand_candidates": ["エルゴベビー ナチュラルカーブ ナーシングピロー(価格未確認)", "ロトトクッション(価格未確認・楽天721冠との言及あり)"],
     },
     "鼻水": {
         "name": "電動鼻水吸引器",
@@ -100,6 +125,10 @@ PRODUCT_CATALOG: dict[str, dict] = {
             {"pain": "口で吸うタイプは自分にも風邪がうつって辛かった", "resolution": "電動タイプにしてから自分の体調を崩さずに済むようになった"},
             {"pain": "鼻水がひどい時期は夜中も何度も起きて対応していた", "resolution": "吸引時間が短くなり親子ともに睡眠の質が上がった"},
         ],
+        # ピジョン「シュポット」(参考12,870円)とBabySmile「メルシーポット」S-504
+        # (参考10,890円)は価格帯を超過。「ちぼじ」(参考3,980円)は手動式で
+        # この項目の「電動」という前提と合わないため、いずれも候補から除外。
+        "brand_candidates": [],
     },
     "後追い": {
         "name": "折りたたみベビーサークル",
@@ -109,6 +138,7 @@ PRODUCT_CATALOG: dict[str, dict] = {
         "reviews": [
             {"pain": "トイレや家事の間も後追いで泣かれて何もできなかった", "resolution": "安全な範囲を作ったことで数分だけ手が離せるようになった"},
         ],
+        "brand_candidates": ["アイリスオーヤマ「ベビーアイランドDX 90199」(価格未確認)", "日本育児「Roomy+」(価格未確認)", "Hugmuu(価格未確認・ランキング2冠との言及あり)"],
     },
     "時短家事": {
         "name": "食洗機",
@@ -118,6 +148,7 @@ PRODUCT_CATALOG: dict[str, dict] = {
         "reviews": [
             {"pain": "寝かしつけ後の洗い物が体力的にきつかった", "resolution": "食洗機に任せてから夜の自由時間が増えた"},
         ],
+        "brand_candidates": [],
     },
     "沐浴": {
         "name": "沐浴チェア",
@@ -127,6 +158,9 @@ PRODUCT_CATALOG: dict[str, dict] = {
         "reviews": [
             {"pain": "片手で支えながら洗うのが不安定で毎回冷や汗をかいていた", "resolution": "チェアが体を支えてくれるので両手で洗えるようになった"},
         ],
+        # ジャンル専用ランキングページは見つかったが、検索結果に具体的な商品名までは
+        # 含まれなかった。
+        "brand_candidates": [],
     },
 }
 
@@ -185,6 +219,9 @@ def recommend_in_price_range(
         "link": build_affiliate_link(entry["keyword"]),
         "review_count": entry.get("review_count", 0),
         "reviews": entry.get("reviews", []),
+        # アヤがWebSearch経由で見つけた未検証のブランド候補(空の場合あり)。
+        # 商品ページで確認するまでは name/price_jpy を置き換えないこと。
+        "brand_candidates": entry.get("brand_candidates", []),
     }
 
 
