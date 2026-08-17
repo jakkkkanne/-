@@ -13,6 +13,10 @@ def tmp_dirs(tmp_path, monkeypatch):
     rejected = tmp_path / "drafts" / "rejected"
     posted = tmp_path / "drafts" / "posted"
     history = tmp_path / "drafts" / "history.jsonl"
+    marketing = tmp_path / "marketing"
+    strategy = tmp_path / "strategy"
+    secretary = tmp_path / "secretary"
+    finance = tmp_path / "finance"
 
     monkeypatch.setattr(config, "COMPETITORS_DIR", competitors)
     monkeypatch.setattr(config, "REPORTS_DIR", reports)
@@ -21,6 +25,10 @@ def tmp_dirs(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "REJECTED_DIR", rejected)
     monkeypatch.setattr(config, "POSTED_DIR", posted)
     monkeypatch.setattr(config, "HISTORY_FILE", history)
+    monkeypatch.setattr(config, "MARKETING_DIR", marketing)
+    monkeypatch.setattr(config, "STRATEGY_DIR", strategy)
+    monkeypatch.setattr(config, "SECRETARY_DIR", secretary)
+    monkeypatch.setattr(config, "FINANCE_DIR", finance)
     config.ensure_dirs()
 
     return {
@@ -31,4 +39,8 @@ def tmp_dirs(tmp_path, monkeypatch):
         "rejected": rejected,
         "posted": posted,
         "history": history,
+        "marketing": marketing,
+        "strategy": strategy,
+        "secretary": secretary,
+        "finance": finance,
     }
