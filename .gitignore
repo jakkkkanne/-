@@ -12,3 +12,4 @@ data/drafts/approved/*.json
 data/drafts/rejected/*.json
 data/drafts/posted/*.json
 data/drafts/history.jsonl
+data/persona/*.md
