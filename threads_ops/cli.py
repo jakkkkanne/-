@@ -2,6 +2,8 @@
 
     python -m threads_ops research
     python -m threads_ops draft --topic "..." --count 3
+    python -m threads_ops persona
+    python -m threads_ops weekly-plan
     python -m threads_ops review
     python -m threads_ops publish
     python -m threads_ops run-all --topic "..." --count 3
@@ -13,7 +15,7 @@ import argparse
 import sys
 from datetime import date
 
-from . import approval, config, draft, publish, research
+from . import approval, config, draft, persona, publish, research, weekly
 
 
 def cmd_research(args: argparse.Namespace) -> None:
@@ -39,18 +41,41 @@ def cmd_draft(args: argparse.Namespace) -> None:
         print(f"  - {d.id}")
 
 
+def cmd_persona(args: argparse.Namespace) -> None:
+    config.ensure_dirs()
+    if not config.ANTHROPIC_API_KEY:
+        print("エラー: ペルソナ生成には ANTHROPIC_API_KEY が必要です。.env に設定してください。", file=sys.stderr)
+        raise SystemExit(1)
+    text, path = persona.build_and_save_persona(experience=args.experience, supplement=args.supplement or "")
+    print(f"ペルソナを生成し保存しました: {path}\n")
+    print(text)
+    print("\n以降 `weekly-plan` はこのファイルを毎回参照します。作り直す場合はこのコマンドを再実行してください。")
+
+
 def cmd_weekly_plan(args: argparse.Namespace) -> None:
     config.ensure_dirs()
+    if not config.ANTHROPIC_API_KEY:
+        print("エラー: weekly-plan には ANTHROPIC_API_KEY が必要です。.env に設定してください。", file=sys.stderr)
+        raise SystemExit(1)
     start_date = date.fromisoformat(args.start_date) if args.start_date else None
-    drafts = draft.create_weekly_plan(
-        topic=args.topic,
-        posts_per_day=args.posts_per_day,
-        days=args.days,
-        start_date=start_date,
-    )
-    print(f"{len(drafts)} 件の下書きを作成しました ({args.days}日 x 1日{args.posts_per_day}投稿、承認待ち):")
+    try:
+        drafts = weekly.create_weekly_posts(
+            theme=args.theme,
+            genre=args.genre,
+            tone=args.tone,
+            start_date=start_date,
+            post_time=args.post_time,
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(1)
+
+    print(f"{len(drafts)} 件の下書きを作成しました (1日1投稿 x 1週間、承認待ち):")
     for d in drafts:
-        print(f"  - {d.id}  予定: {d.scheduled_at}")
+        print(f"  - {d.id}  {d.scheduled_at}  [{d.post_type}]")
+        print(f"    {d.text}")
+        if d.aim:
+            print(f"    (狙い: {d.aim})")
     print("\n`review` で内容を確認・承認し、`publish` を毎日実行すると予定時刻が来たものだけ投稿されます。")
 
 
@@ -89,14 +114,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_draft.add_argument("--count", type=int, default=3, help="生成する下書きの数")
     p_draft.set_defaults(func=cmd_draft)
 
+    p_persona = sub.add_parser(
+        "persona", help="固定の体験談からアカウントのペルソナ(語り口のサンプル)を生成して保存"
+    )
+    p_persona.add_argument(
+        "--experience", default=persona.DEFAULT_EXPERIENCE, help="ペルソナの元になる体験(既定: 妻に不倫をされ探偵を雇い証拠を確保し慰謝料請求)"
+    )
+    p_persona.add_argument("--supplement", default=None, help="体験の補足情報(任意)")
+    p_persona.set_defaults(func=cmd_persona)
+
     p_weekly = sub.add_parser(
-        "weekly-plan", help="1日N投稿 x 1週間分の下書きをまとめて生成(既定: 6投稿/日 x 7日、探偵アカウント向け)"
+        "weekly-plan", help="ペルソナを参考に1日1投稿 x 1週間分(7本)の下書きを生成(要: persona を先に実行)"
     )
-    p_weekly.add_argument(
-        "--topic", default="妻の浮気調査(30代男性)", help="下書きに記録するトピック名(既定: 妻の浮気調査(30代男性))"
-    )
-    p_weekly.add_argument("--posts-per-day", type=int, default=6, help="1日あたりの投稿数(既定: 6)")
-    p_weekly.add_argument("--days", type=int, default=7, help="生成する日数(既定: 7)")
+    p_weekly.add_argument("--theme", default=weekly.DEFAULT_THEME, help=f"投稿テーマ(既定: {weekly.DEFAULT_THEME})")
+    p_weekly.add_argument("--genre", default=weekly.DEFAULT_GENRE, help=f"アカウントのジャンル(既定: {weekly.DEFAULT_GENRE})")
+    p_weekly.add_argument("--tone", default=weekly.DEFAULT_TONE, help=f"アカウントの口調(既定: {weekly.DEFAULT_TONE})")
+    p_weekly.add_argument("--post-time", default=weekly.DEFAULT_POST_TIME, help="毎日の投稿予定時刻 HH:MM、JST(既定: 08:00)")
     p_weekly.add_argument("--start-date", default=None, help="開始日 YYYY-MM-DD(既定: 今日、JST)")
     p_weekly.set_defaults(func=cmd_weekly_plan)
 

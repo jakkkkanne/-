@@ -65,11 +65,15 @@ def interactive_review(
 
     for idx, draft in enumerate(drafts, start=1):
         header = f"\n--- 下書き {idx}/{len(drafts)} (topic: {draft.topic}, generator: {draft.generator}"
+        if draft.post_type:
+            header += f", 型: {draft.post_type}"
         if draft.scheduled_at:
             header += f", 予定: {draft.scheduled_at}"
         header += ") ---"
         print_func(header)
         print_func(draft.text)
+        if draft.aim:
+            print_func(f"(狙い: {draft.aim})")
         print_func(f"({len(draft.text)} 文字)")
 
         while True:

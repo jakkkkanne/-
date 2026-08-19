@@ -70,6 +70,8 @@ class Draft:
     generator: str = "template"
     note: str | None = None
     scheduled_at: str | None = None  # ISO-8601; when set, publish holds the draft until this time
+    post_type: str | None = None  # e.g. "悩み共感型" -- which weekly-post format this is
+    aim: str | None = None  # one-line note on what this specific post is meant to do
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -63,38 +63,45 @@ python -m threads_ops draft --topic "朝活" --count 3
 `ANTHROPIC_API_KEY` が設定されていれば Claude API で自然な文章を生成し、未設定なら
 オフラインのテンプレート生成にフォールバックします。
 
-### 2.5 1週間分をまとめて生成(探偵アカウント向け・ジャンル固定)
+### 2.5 ペルソナ生成 → 1週間分の投稿生成(探偵アカウント向け)
+
+このアカウント専用の2段階パイプラインです。どちらも Claude API を使うため
+`ANTHROPIC_API_KEY` の設定が必須です(オフラインのフォールバックはありません)。
+
+**a. ペルソナを作る(初回に1回)**
+
+```bash
+python -m threads_ops persona
+```
+
+固定の体験談(既定:「妻に不倫をされ探偵を雇い証拠を確保し慰謝料請求」)を、
+共感のフック → どん底 → 転機 →変化 → メッセージ、という感情の流れを持つ
+ストーリー投稿3パターンに変換し、`data/persona/persona.md` に保存します。
+これがアカウントの「語り口の見本」になります。以後の `weekly-plan` は毎回
+このファイルを読み込んで参考にします。作り直したい場合だけ再実行してください
+(`--experience` / `--supplement` で体験の内容を変更可能)。
+
+**b. 1週間分の投稿を作る(ペルソナ生成後、毎週)**
 
 ```bash
 python -m threads_ops weekly-plan
 ```
 
-1日6投稿 x 7日分(既定)の下書きを一括生成し、`data/drafts/pending/` に保存します。
-このアカウントのジャンルは「妻に浮気(不倫)された30代男性が探偵事務所に調査を依頼する」
-という実話風の連載に統一しており、`DetectiveDraftGenerator` が固定で使われます
-(`ANTHROPIC_API_KEY` の有無に関わらず、`draft` コマンドのような汎用生成には
-フォールバックしません)。
+保存済みのペルソナを参考に、テーマ「不倫する人の共通行動」・ジャンル「不倫された・
+浮気された」・口調「やさしく、等身大で偉そうにせず、友達に語りかける様に」(いずれも
+`--theme` / `--genre` / `--tone` で変更可)で、1日1投稿・週7本を生成します。
+7本は必ず次の型を1つずつ使います:
 
-1日6投稿は1つの依頼(ケース)を次の6段階で描く構成です:
+1日目:悩み共感型 / 2日目:実体験型 / 3日目:ノウハウ型 / 4日目:逆張り型 /
+5日目:数字提示型 / 6日目:質問型 / 7日目:まとめ型
 
-1. 依頼人紹介(30代の依頼人男性)
-2. 相談内容(妻への違和感)
-3. 調査方針
-4. 調査開始(尾行)
-5. 証拠の記録
-6. 調査報告(結末)
-
-依頼人の年齢や細部は日ごとに変えつつ、同じジャンル・同じ構成で1週間分(7ケース)を
-生成します。
-
-各下書きには `scheduled_at`(JST の投稿予定時刻)が付き、`publish` は予定時刻を
-過ぎたものだけを投稿します。承認は前倒しでまとめて行っても、実際の投稿は
-1日6件ずつ小出しになる、という運用が可能です(`publish` を毎日 cron 等で実行してください)。
-
-オプション(`--topic` は下書きに記録するメタデータで、投稿本文には影響しません):
+各下書きには `scheduled_at`(既定 JST 08:00、`--post-time` で変更可)が付き、
+`publish` は予定時刻を過ぎたものだけを投稿します。承認は前倒しでまとめて行っても、
+実際の投稿は1日1件ずつ小出しになります(`publish` を毎日 cron 等で実行してください)。
+`review` では各下書きの型と狙い(何のための投稿か)も表示されます。
 
 ```bash
-python -m threads_ops weekly-plan --posts-per-day 6 --days 7 --start-date 2026-08-04
+python -m threads_ops weekly-plan --start-date 2026-08-24 --post-time 07:30
 ```
 
 ### 3. 承認(CLI)
@@ -139,13 +146,16 @@ threads_ops/       パイプライン本体
   config.py         環境変数ベースの設定
   models.py         CompetitorPost / ResearchReport / Draft
   research.py        競合データ分析
-  draft.py            下書き生成 (テンプレート / 探偵アカウント用 / Anthropic / 週次プラン)
+  draft.py            下書き生成 (テンプレート / Anthropic、`draft` コマンド用)
+  persona.py          ペルソナ生成(プロンプト①、`persona` コマンド用)
+  weekly.py            週次投稿生成(プロンプト②、`weekly-plan` コマンド用)
   approval.py       CLI 承認フロー
-  publish.py         投稿 (Mock / 実 API)
+  publish.py         投稿 (Mock / 実 API、scheduled_at を尊重)
   cli.py            コマンド群
 data/
   competitors/      競合データ(自分で用意)
   reports/          生成されたリサーチレポート
+  persona/          生成済みペルソナ(persona.md)
   drafts/
     pending/        承認待ち
     approved/       承認済み(投稿対象)
