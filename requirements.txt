@@ -5,5 +5,12 @@ requests>=2.31
 # ANTHROPIC_API_KEY is set). Not required for the template generator or tests.
 anthropic>=0.40
 
+# mt5_trading: indicator/strategy math (cross-platform, needed for tests too)
+pandas>=2.0
+
+# mt5_trading: MT5 terminal connectivity. Windows-only (or Wine); only
+# required to actually run `python -m mt5_trading run`, not for tests.
+MetaTrader5>=5.0.45; sys_platform == "win32"
+
 # Dev / test
 pytest>=8.0
