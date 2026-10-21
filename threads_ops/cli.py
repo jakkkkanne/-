@@ -5,6 +5,8 @@
     python -m threads_ops review
     python -m threads_ops publish
     python -m threads_ops run-all --topic "..." --count 3
+    python -m threads_ops fetch-history [--limit N] [--since YYYY-MM-DD] [--no-insights]
+    python -m threads_ops classify
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import approval, config, draft, publish, research
+from . import approval, config, draft, history, publish, research
 
 
 def cmd_research(args: argparse.Namespace) -> None:
@@ -62,6 +64,36 @@ def cmd_run_all(args: argparse.Namespace) -> None:
     cmd_publish(args)
 
 
+def cmd_fetch_history(args: argparse.Namespace) -> None:
+    config.ensure_dirs()
+    try:
+        posts, warnings = history.fetch_own_posts(
+            limit=args.limit, since=args.since, with_insights=not args.no_insights
+        )
+    except RuntimeError as exc:
+        print(f"エラー: {exc}", file=sys.stderr)
+        raise SystemExit(1)
+    path = history.save_posts(posts)
+    print(f"過去の投稿 {len(posts)} 件を取得しました: {path}")
+    if warnings:
+        print(f"インサイトを取得できなかった投稿: {len(warnings)} 件 (threads_manage_insights 権限を確認してください)")
+
+
+def cmd_classify(args: argparse.Namespace) -> None:
+    config.ensure_dirs()
+    posts = history.load_posts()
+    if not posts:
+        print("投稿データがありません。先に `fetch-history` を実行してください。", file=sys.stderr)
+        raise SystemExit(1)
+    grouped = history.classify_posts(posts)
+    history.save_posts(posts)  # persist the assigned category on each post
+    path = history.save_sorted(grouped)
+    print(f"{len(posts)} 件を仕分けしました ({path}):")
+    for row in history.summarize(grouped):
+        if row["count"]:
+            print(f"  - {row['category']}: {row['count']} 件 (平均エンゲージメント {row['avg_engagement']})")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="threads-ops", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -80,6 +112,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--topic", required=True, help="投稿のトピック/テーマ")
     p_all.add_argument("--count", type=int, default=3, help="生成する下書きの数")
     p_all.set_defaults(func=cmd_run_all)
+
+    p_fetch = sub.add_parser("fetch-history", help="自分の過去の投稿を Threads API から取得")
+    p_fetch.add_argument("--limit", type=int, default=None, help="取得する最大件数 (既定: 全件)")
+    p_fetch.add_argument("--since", default=None, help="この日付以降のみ (YYYY-MM-DD または UNIX 時刻)")
+    p_fetch.add_argument("--no-insights", action="store_true", help="いいね数などのインサイトを取得しない")
+    p_fetch.set_defaults(func=cmd_fetch_history)
+
+    sub.add_parser("classify", help="取得済みの投稿をカテゴリ別に仕分け").set_defaults(func=cmd_classify)
 
     return parser
 

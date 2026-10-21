@@ -84,6 +84,25 @@ python -m threads_ops publish
 `THREADS_USER_ID` を設定してください(Meta の [Threads API](https://developers.facebook.com/docs/threads)
 のセットアップが別途必要です)。
 
+### 5. 過去の投稿を取得して仕分け
+
+```bash
+python -m threads_ops fetch-history            # 自分の全投稿 + インサイトを取得
+python -m threads_ops fetch-history --since 2026-01-01 --limit 200
+python -m threads_ops classify                 # カテゴリ別に仕分け
+```
+
+`fetch-history` は公式 API (`GET /me/threads`) で **自分のアカウントの** 過去投稿をページ送りしながら全件取得し、
+各投稿のインサイト(閲覧数・いいね・返信・リポスト・引用)も取得して `data/my_posts/posts.json` に保存します。
+`THREADS_ACCESS_TOKEN` が必要で、トークンには `threads_basic`(投稿取得)と
+`threads_manage_insights`(インサイト。無い場合は `--no-insights`)の権限が必要です。読み取り専用で、投稿は一切行いません。
+
+`classify` は本文のキーワードで各投稿を
+「告知・宣伝 / ノウハウ・Tips / 質問・問いかけ / 実績・報告 / 意見・考察 / 日常・雑談 / その他」に仕分けし、
+`data/my_posts/sorted/<カテゴリ>.json`(エンゲージメント順)と `summary.json`(カテゴリ別件数・平均エンゲージメント)を出力します。
+カテゴリやキーワードを変えたい場合は `data/my_posts/categories.json` を
+`{"カテゴリ名": ["キーワード", ...]}` の形式で作成してください(上から順に優先)。
+
 ### まとめて実行
 
 ```bash

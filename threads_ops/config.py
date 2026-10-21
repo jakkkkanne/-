@@ -17,6 +17,10 @@ APPROVED_DIR = DRAFTS_DIR / "approved"
 REJECTED_DIR = DRAFTS_DIR / "rejected"
 POSTED_DIR = DRAFTS_DIR / "posted"
 HISTORY_FILE = DRAFTS_DIR / "history.jsonl"
+MY_POSTS_DIR = DATA_DIR / "my_posts"
+MY_POSTS_FILE = MY_POSTS_DIR / "posts.json"
+MY_POSTS_SORTED_DIR = MY_POSTS_DIR / "sorted"
+CATEGORIES_FILE = MY_POSTS_DIR / "categories.json"
 
 # "mock" never calls the real Threads API. "real" requires THREADS_ACCESS_TOKEN
 # and THREADS_USER_ID and performs actual publish calls.
@@ -33,5 +37,5 @@ THREADS_MAX_CHARS = 500
 
 
 def ensure_dirs() -> None:
-    for d in (COMPETITORS_DIR, REPORTS_DIR, PENDING_DIR, APPROVED_DIR, REJECTED_DIR, POSTED_DIR):
+    for d in (COMPETITORS_DIR, REPORTS_DIR, PENDING_DIR, APPROVED_DIR, REJECTED_DIR, POSTED_DIR, MY_POSTS_SORTED_DIR):
         d.mkdir(parents=True, exist_ok=True)
