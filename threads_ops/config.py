@@ -20,7 +20,7 @@ HISTORY_FILE = DRAFTS_DIR / "history.jsonl"
 MY_POSTS_DIR = DATA_DIR / "my_posts"
 MY_POSTS_FILE = MY_POSTS_DIR / "posts.json"
 MY_POSTS_SORTED_DIR = MY_POSTS_DIR / "sorted"
-CATEGORIES_FILE = MY_POSTS_DIR / "categories.json"
+CLASSIFY_RULES_FILE = MY_POSTS_DIR / "classify_rules.json"
 
 # "mock" never calls the real Threads API. "real" requires THREADS_ACCESS_TOKEN
 # and THREADS_USER_ID and performs actual publish calls.

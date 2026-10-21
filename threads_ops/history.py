@@ -7,15 +7,20 @@ threads_basic permission) and, optionally, per-post insights (GET
 pages through all of them and saves the raw result to
 data/my_posts/posts.json.
 
-`classify_posts` then sorts each post into one category using a simple
-keyword-hit count. Categories live in data/my_posts/categories.json so
-they can be edited without touching code; DEFAULT_CATEGORIES is used when
-that file doesn't exist. The result is written to data/my_posts/sorted/,
-one JSON file per category, plus a summary.json.
+`classify_posts` then triages each post against the account concept
+(育児の"困った"を、モノとアイデアで5分ラクにする) into 残す / 手直し /
+削除候補, with the reasons, and also labels it with one content pillar
+(困り事→解決, 0円アイデア, ...). Nothing is ever deleted automatically: the
+result is a review sheet for a human. Keywords live in
+data/my_posts/classify_rules.json ({"theme_keywords": [...], "categories":
+{...}}, both optional) so they can be edited without touching code.
+Results go to data/my_posts/sorted/: one JSON file per verdict,
+summary.json, and a Markdown checklist (棚卸し.md).
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 
 from . import config, storage
@@ -25,20 +30,52 @@ POST_FIELDS = "id,text,timestamp,media_type,permalink,shortcode,is_quote_post"
 INSIGHT_METRICS = "views,likes,replies,reposts,quotes"
 OTHER_CATEGORY = "その他"
 
+KEEP, REVISE, DELETE = "残す", "手直し", "削除候補"
+VERDICTS = (KEEP, REVISE, DELETE)
+
+# Words that tie a post to the account theme (育児の困り事 × グッズ・時短・アイデア).
+DEFAULT_THEME_KEYWORDS = [
+    "育児", "子育て", "子ども", "子供", "こども", "息子", "娘", "2歳", "6歳", "イヤイヤ",
+    "保育園", "幼稚園", "小学校", "入学", "ランドセル", "寝かしつけ", "夜泣き", "オムツ",
+    "おむつ", "離乳食", "着替え", "お風呂", "パパ", "ママ", "ワンオペ", "時短", "グッズ",
+    "100均", "買ってよかった", "便利", "ラクに", "楽に", "工夫", "困った", "困り",
+]
+
+# Content pillars from .company/secretary/notes/threads-concept.md.
 # Checked in order; on a tie in keyword hits the earlier category wins.
 DEFAULT_CATEGORIES: dict[str, list[str]] = {
-    "告知・宣伝": ["告知", "お知らせ", "募集", "販売", "リリース", "公開しました", "申し込み",
-                "予約", "セール", "キャンペーン", "プロフィール", "リンク", "限定"],
-    "ノウハウ・Tips": ["方法", "コツ", "やり方", "ポイント", "手順", "おすすめ", "解説",
-                   "まとめ", "選", "tips", "ステップ", "知っておく", "すべき", "法則"],
-    "質問・問いかけ": ["?", "？", "教えて", "どう思", "みなさん", "皆さん", "アンケート",
-                  "どっち", "ありますか", "ですか"],
-    "実績・報告": ["達成", "突破", "フォロワー", "万円", "結果", "報告", "記録", "振り返り",
-               "ありがとう", "感謝"],
-    "意見・考察": ["思う", "考え", "本質", "大事", "大切", "べき", "気づ", "なぜ", "理由"],
-    "日常・雑談": ["今日", "朝", "昼", "夜", "ごはん", "カフェ", "週末", "散歩", "眠", "天気",
-               "休み", "旅行"],
+    "買ってよかった": ["買ってよかった", "買って良かった", "レビュー", "愛用", "グッズ", "商品",
+                 "使ってみた", "おすすめ", "PR", "楽天", "Amazon"],
+    "0円アイデア": ["100均", "家にある", "0円", "アイデア", "工夫", "裏ワザ", "ワザ", "やり方",
+                "コツ", "前の晩"],
+    "困り事→解決": ["困って", "困った", "困り", "解決", "ラクに", "楽に", "助かった", "ストレス",
+                "戦場", "大変"],
+    "質問・アンケート": ["?", "？", "教えて", "みんなは", "みなさん", "皆さん", "どうしてる",
+                   "アンケート", "どっち"],
 }
+
+# Things that look like personal information. Matches are only flagged for
+# a human to check -- the patterns are deliberately broad.
+PRIVACY_PATTERNS = {
+    "電話番号": re.compile(r"0\d{1,4}-\d{1,4}-\d{3,4}|0[789]0\d{8}"),
+    "メールアドレス": re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"),
+    "郵便番号": re.compile(r"〒\s?\d{3}-?\d{4}"),
+    "住所(丁目・番地)": re.compile(r"\d+\s?(丁目|番地)"),
+    "園・学校の名前": re.compile(r"(?<![一-龥ァ-ヶ])([一-龥ァ-ヶ]{2,})(保育園|幼稚園|こども園|小学校)"),
+}
+# Common words that precede 保育園/小学校 without naming a specific one.
+_GENERIC_SCHOOL_PREFIXES = ("来年", "今年", "去年", "毎日", "今日", "明日", "昨日", "近所", "地元", "公立", "私立")
+
+
+def _privacy_flags(text: str) -> list[str]:
+    flags = []
+    for label, pattern in PRIVACY_PATTERNS.items():
+        for match in pattern.finditer(text):
+            if label == "園・学校の名前" and match.group(1).endswith(_GENERIC_SCHOOL_PREFIXES):
+                continue
+            flags.append(label)
+            break
+    return flags
 
 
 @dataclass
@@ -52,6 +89,8 @@ class OwnPost:
     metrics: dict[str, int] = field(default_factory=dict)
     category: str | None = None
     matched_keywords: list[str] = field(default_factory=list)
+    verdict: str | None = None
+    reasons: list[str] = field(default_factory=list)
 
     def engagement_score(self) -> float:
         m = self.metrics
@@ -157,45 +196,84 @@ def load_posts(path=None) -> list[OwnPost]:
     return [OwnPost.from_dict(raw) for raw in raw_posts]
 
 
-def load_categories(path=None) -> dict[str, list[str]]:
-    path = path or config.CATEGORIES_FILE
-    if path.exists():
-        return storage.read_json(path)
-    return DEFAULT_CATEGORIES
+def load_rules(path=None) -> tuple[list[str], dict[str, list[str]]]:
+    path = path or config.CLASSIFY_RULES_FILE
+    rules = storage.read_json(path) if path.exists() else {}
+    return rules.get("theme_keywords", DEFAULT_THEME_KEYWORDS), rules.get("categories", DEFAULT_CATEGORIES)
+
+
+def _hits(text: str, keywords: list[str]) -> list[str]:
+    lowered = text.lower()
+    return [k for k in keywords if k.lower() in lowered]
 
 
 def classify_post(post: OwnPost, categories: dict[str, list[str]]) -> tuple[str, list[str]]:
-    text = post.text.lower()
     best, best_hits = OTHER_CATEGORY, []
     for name, keywords in categories.items():
-        hits = [k for k in keywords if k.lower() in text]
+        hits = _hits(post.text, keywords)
         if len(hits) > len(best_hits):
             best, best_hits = name, hits
     return best, best_hits
 
 
-def classify_posts(posts: list[OwnPost], categories: dict[str, list[str]] | None = None) -> dict[str, list[OwnPost]]:
-    categories = categories or load_categories()
-    grouped: dict[str, list[OwnPost]] = {name: [] for name in [*categories, OTHER_CATEGORY]}
+def triage_post(post: OwnPost, theme_keywords: list[str]) -> tuple[str, list[str]]:
+    privacy = _privacy_flags(post.text)
+    if privacy:
+        return DELETE, [f"個人情報の可能性: {', '.join(privacy)}"]
+    theme_hits = _hits(post.text, theme_keywords)
+    if len(theme_hits) >= 2:
+        return KEEP, [f"テーマに合致: {', '.join(theme_hits)}"]
+    if theme_hits:
+        return REVISE, [f"テーマとのつながりが弱い({theme_hits[0]} のみ)。困り事と解決策をはっきり書く"]
+    return DELETE, ["テーマ(育児の困り事 × グッズ・時短)との関係が見当たらない"]
+
+
+def classify_posts(
+    posts: list[OwnPost],
+    categories: dict[str, list[str]] | None = None,
+    theme_keywords: list[str] | None = None,
+) -> dict[str, list[OwnPost]]:
+    """Triage posts into 残す / 手直し / 削除候補 and label each with a pillar."""
+    default_theme, default_categories = load_rules()
+    categories = categories or default_categories
+    theme_keywords = theme_keywords or default_theme
+    grouped: dict[str, list[OwnPost]] = {v: [] for v in VERDICTS}
     for post in posts:
         post.category, post.matched_keywords = classify_post(post, categories)
-        grouped[post.category].append(post)
+        post.verdict, post.reasons = triage_post(post, theme_keywords)
+        grouped[post.verdict].append(post)
     for group in grouped.values():
         group.sort(key=lambda p: p.engagement_score(), reverse=True)
     return grouped
 
 
-def summarize(grouped: dict[str, list[OwnPost]]) -> list[dict]:
-    rows = []
+def summarize(grouped: dict[str, list[OwnPost]]) -> dict:
+    verdicts = []
+    pillars: dict[str, int] = {}
     for name, group in grouped.items():
         scores = [p.engagement_score() for p in group]
-        rows.append({
-            "category": name,
+        verdicts.append({
+            "verdict": name,
             "count": len(group),
             "avg_engagement": round(sum(scores) / len(scores), 1) if scores else 0.0,
-            "top_post": group[0].permalink or group[0].id if group else None,
         })
-    return rows
+        for post in group:
+            pillars[post.category] = pillars.get(post.category, 0) + 1
+    return {"verdicts": verdicts, "pillars": pillars}
+
+
+def render_checklist(grouped: dict[str, list[OwnPost]]) -> str:
+    lines = ["# 過去投稿の棚卸し", "", f"生成: {now_iso()}", "",
+             "自動判定は目安です。各投稿を開いて確認し、チェックを付けてから対応してください。", ""]
+    for name, group in grouped.items():
+        lines += [f"## {name}({len(group)}件)", ""]
+        for post in group:
+            excerpt = post.text.replace("\n", " ")[:60]
+            link = post.permalink or post.id
+            lines.append(f"- [ ] {post.posted_at[:10]} [{post.category}] {excerpt}")
+            lines.append(f"  - 理由: {' / '.join(post.reasons)} | スコア: {post.engagement_score():g} | {link}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def save_sorted(grouped: dict[str, list[OwnPost]], sorted_dir=None) -> str:
@@ -204,6 +282,7 @@ def save_sorted(grouped: dict[str, list[OwnPost]], sorted_dir=None) -> str:
         old.unlink()
     for name, group in grouped.items():
         if group:
-            storage.write_json(sorted_dir / f"{name}.json", {"category": name, "posts": [p.to_dict() for p in group]})
-    storage.write_json(sorted_dir / "summary.json", {"generated_at": now_iso(), "categories": summarize(grouped)})
+            storage.write_json(sorted_dir / f"{name}.json", {"verdict": name, "posts": [p.to_dict() for p in group]})
+    storage.write_json(sorted_dir / "summary.json", {"generated_at": now_iso(), **summarize(grouped)})
+    (sorted_dir / "棚卸し.md").write_text(render_checklist(grouped), encoding="utf-8")
     return str(sorted_dir)

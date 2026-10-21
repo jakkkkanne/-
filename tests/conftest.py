@@ -24,7 +24,7 @@ def tmp_dirs(tmp_path, monkeypatch):
     my_posts = tmp_path / "my_posts"
     monkeypatch.setattr(config, "MY_POSTS_FILE", my_posts / "posts.json")
     monkeypatch.setattr(config, "MY_POSTS_SORTED_DIR", my_posts / "sorted")
-    monkeypatch.setattr(config, "CATEGORIES_FILE", my_posts / "categories.json")
+    monkeypatch.setattr(config, "CLASSIFY_RULES_FILE", my_posts / "classify_rules.json")
     config.ensure_dirs()
 
     return {

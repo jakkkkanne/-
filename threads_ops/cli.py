@@ -88,10 +88,12 @@ def cmd_classify(args: argparse.Namespace) -> None:
     grouped = history.classify_posts(posts)
     history.save_posts(posts)  # persist the assigned category on each post
     path = history.save_sorted(grouped)
+    summary = history.summarize(grouped)
     print(f"{len(posts)} 件を仕分けしました ({path}):")
-    for row in history.summarize(grouped):
-        if row["count"]:
-            print(f"  - {row['category']}: {row['count']} 件 (平均エンゲージメント {row['avg_engagement']})")
+    for row in summary["verdicts"]:
+        print(f"  - {row['verdict']}: {row['count']} 件 (平均エンゲージメント {row['avg_engagement']})")
+    print("投稿の柱:", ", ".join(f"{k} {v}件" for k, v in summary["pillars"].items()))
+    print(f"確認用チェックリスト: {path}/棚卸し.md")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -119,7 +121,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_fetch.add_argument("--no-insights", action="store_true", help="いいね数などのインサイトを取得しない")
     p_fetch.set_defaults(func=cmd_fetch_history)
 
-    sub.add_parser("classify", help="取得済みの投稿をカテゴリ別に仕分け").set_defaults(func=cmd_classify)
+    sub.add_parser("classify", help="取得済みの投稿を 残す/手直し/削除候補 に仕分け").set_defaults(func=cmd_classify)
 
     return parser
 
