@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+<style>
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family:'Nunito', sans-serif; color:#1f2a44; }
+.page { width:210mm; height:297mm; padding:16mm; position:relative; overflow:hidden; page-break-after:always; background:#fff; }
+.cover { background:#1f2a44; color:#f3efe6; padding:0; }
+.cover svg.bg { position:absolute; inset:0; width:100%; height:100%; }
+.cover .panel { position:absolute; left:20mm; right:20mm; top:92mm; background:#1f2a44; padding:12mm; text-align:center; border:0.4mm solid #f3efe6; }
+.cover .jp { font-family:'Noto Serif JP'; font-size:9mm; letter-spacing:4mm; }
+.cover h1 { font-family:'Cormorant Garamond'; font-weight:600; font-size:15mm; line-height:1.05; margin-top:3mm; }
+.cover p { font-family:'Cormorant Garamond'; font-style:italic; font-size:6mm; margin-top:4mm; opacity:.85; }
+.cover .inc { font-size:3.6mm; letter-spacing:1.2mm; text-transform:uppercase; margin-top:7mm; opacity:.85; }
+h2 { font-family:'Cormorant Garamond'; font-size:10mm; font-weight:600; }
+h2 small { font-family:'Noto Serif JP'; font-size:5mm; color:#b8352b; margin-left:3mm; }
+.sub { font-size:3.6mm; color:#666; margin-top:1mm; }
+.pat { margin-top:6mm; width:178mm; height:178mm; border:0.3mm solid #aab; }
+.steps { margin-top:6mm; display:grid; grid-template-columns:1fr 1fr; gap:4mm 8mm; font-size:3.4mm; line-height:1.45; }
+.steps div b { color:#b8352b; }
+.legend { margin-top:3mm; font-size:3.2mm; color:#666; display:flex; gap:8mm; }
+.foot { position:absolute; bottom:8mm; left:16mm; right:16mm; display:flex; justify-content:space-between; font-size:3mm; color:#999; }
+</style></head><body>
+
+<!-- Cover -->
+<section class="page cover">
+  <svg class="bg" id="coverbg"></svg>
+  <div class="panel">
+    <div class="jp">刺し子</div>
+    <h1>Sashiko<br>Pattern Collection</h1>
+    <p>Traditional Japanese stitching — printable templates for beginners</p>
+    <div class="inc">10 patterns · Step-by-step guide · Actual-size templates</div>
+  </div>
+</section>
+
+<!-- Pattern page: Seigaiha -->
+<section class="page">
+  <h2>Seigaiha<small>青海波</small></h2>
+  <div class="sub">"Blue ocean waves" — a wish for peaceful, ongoing good fortune · Difficulty ★★☆</div>
+  <svg class="pat" id="seigaiha" viewBox="0 0 180 180"></svg>
+  <div class="legend"><span>— — Stitch line (≈3–4 mm stitch)</span><span>Template is actual size: 17.8 × 17.8 cm</span></div>
+  <div class="steps">
+    <div><b>1. Transfer</b> — Place the template under light fabric (or use carbon paper) and trace the lines with a water-erasable pen.</div>
+    <div><b>2. Stitch order</b> — Start with the outermost arcs of the top row, working left to right. Inner arcs come last.</div>
+    <div><b>3. Rhythm</b> — Load 3–5 stitches on the needle before pulling through. Keep the top stitch slightly longer than the gap.</div>
+    <div><b>4. Finish</b> — Leave a little slack at each turn so the fabric doesn't pucker, then remove the pen marks with water.</div>
+  </div>
+  <div class="foot"><span>© Your Shop Name · Personal use only</span><span>Pattern 1 / 10</span></div>
+</section>
+
+<!-- Pattern page: Hitomezashi -->
+<section class="page">
+  <h2>Hitomezashi Jūjizashi<small>十字刺し</small></h2>
+  <div class="sub">"One-stitch" cross pattern — stitched on a grid, perfect first project · Difficulty ★☆☆</div>
+  <svg class="pat" id="hitome" viewBox="0 0 180 180"></svg>
+  <div class="legend"><span>Grid: 1 square = 5 mm</span><span>Red = horizontal stitches · Navy = vertical stitches</span></div>
+  <div class="steps">
+    <div><b>1. Grid</b> — Mark a 5 mm grid on the fabric (a ruler and fabric pen, or our printable grid on page 12).</div>
+    <div><b>2. Horizontal</b> — Work each row left to right: one stitch (1 square long) centred on every other grid point.</div>
+    <div><b>3. Vertical</b> — Now stitch vertically through the same points, crossing over each horizontal stitch — the crosses appear!</div>
+    <div><b>4. Use it</b> — Coasters, tote bag patches, visible mending on jeans, or framed as textile art.</div>
+  </div>
+  <div class="foot"><span>© Your Shop Name · Personal use only</span><span>Pattern 2 / 10</span></div>
+</section>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+function seigaiha(svg, R, stroke, bg, dash, w){
+  const W=+svg.getAttribute('viewBox').split(' ')[2], H=+svg.getAttribute('viewBox').split(' ')[3];
+  let out=`<rect width="${W}" height="${H}" fill="${bg}"/>`;
+  let row=0;
+  for(let y=-R; y<=H+R; y+=R/2, row++){
+    const off = row%2 ? R : 0;
+    for(let x=-2*R+off; x<=W+2*R; x+=2*R){
+      out+=`<circle cx="${x}" cy="${y}" r="${R}" fill="${bg}" stroke="none"/>`;
+      [1,.75,.5,.25].forEach(f=> out+=`<circle cx="${x}" cy="${y}" r="${R*f}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linecap="round"/>`);
+    }
+  }
+  svg.innerHTML=out;
+}
+seigaiha(document.getElementById('seigaiha'), 20, '#1f2a44', '#fff', '2.2 1.4', .55);
+const cb=document.getElementById('coverbg'); cb.setAttribute('viewBox','0 0 210 297'); cb.setAttribute('preserveAspectRatio','xMidYMid slice');
+seigaiha(cb, 18, '#f3efe6', '#1f2a44', '2.6 1.8', .6);
+
+// hitomezashi cross pattern: alternate offsets give the classic jūjizashi crosses
+(function(){
+  const s=5, n=36, svg=document.getElementById('hitome'); let o=`<rect width="180" height="180" fill="#fff"/>`;
+  for(let i=1;i<n;i++){ for(let j=1;j<n;j++){ if((i+j)%2===0){
+      o+=`<line x1="${j*s-s/2+.6}" y1="${i*s}" x2="${j*s+s/2-.6}" y2="${i*s}" stroke="#b8352b" stroke-width=".8" stroke-linecap="round"/>`;
+      o+=`<line x1="${j*s}" y1="${i*s-s/2+.6}" x2="${j*s}" y2="${i*s+s/2-.6}" stroke="#1f2a44" stroke-width=".8" stroke-linecap="round"/>`; } } }
+  svg.innerHTML=o;
+})();
+</script>
+</body></html>
