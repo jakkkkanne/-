@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Japanese Eto 12 Zodiac Set</title>
+<link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+JP:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="eto-style.css">
+</head><body>
+<div id="pages"></div>
+<script src="eto-data.js"></script>
+<script>
+// ?only=sheep  → render a single animal (used for individual listings)
+const only = new URLSearchParams(location.search).get('only');
+const list = only ? ETO.filter(e => e.en.toLowerCase() === only) : ETO;
+document.getElementById('pages').innerHTML = list.map(e => `
+<section class="page">
+  <div class="vert">${e.jpYear}</div>
+  <div class="seal">${e.k}<br>年</div>
+  <div class="kanji">${e.k}</div>
+  <div class="reading">${e.kana} · ${e.romaji}</div>
+  <div class="title"><h1>Year of the ${e.en}${e.alt ? ' <span>(' + e.alt + ')</span>' : ''}</h1>
+    <p>The ${e.ord} sign of the Japanese Eto 干支</p></div>
+  <div class="traits">${e.traits.join(' · ')}</div>
+  <div class="years">${yearsOf(e).join(' · ')}</div>
+</section>`).join('');
+</script>
+</body></html>

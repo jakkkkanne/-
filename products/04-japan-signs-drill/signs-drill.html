@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Read Japan in 14 Days</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Zen+Maru+Gothic:wght@500;700&family=Nunito:wght@400;600;700;800&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+@page { size: 8.5in 11in; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --ink: #23252e; --sub: #6a6f7c; --accent: #e0675a; --teal: #2a7f86; --soft: #f6f3ee; --line: #e2e2e8; }
+body { font-family: 'Nunito', 'Noto Sans JP', sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.4; }
+.page { width: 8.5in; height: 11in; padding: .5in .55in .45in; position: relative; overflow: hidden; page-break-after: always; background: #fff; }
+.foot { position: absolute; bottom: .28in; left: .55in; right: .55in; display: flex; justify-content: space-between; font-size: 7.5pt; color: #a0a4ad; }
+
+/* cover */
+.cover { background: var(--soft); }
+.cover .tag { display: inline-block; background: var(--accent); color: #fff; font-weight: 800; font-size: 9pt; letter-spacing: 2px; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; }
+.cover h1 { font-size: 40pt; line-height: 1; font-weight: 800; margin-top: .18in; }
+.cover h1 .jp { display: block; font-family: 'Zen Maru Gothic'; font-size: 19pt; color: var(--accent); margin-top: .1in; }
+.cover .lead { font-size: 12pt; color: var(--sub); margin-top: .15in; max-width: 6in; }
+.days { display: grid; grid-template-columns: 1fr 1fr; gap: .07in .25in; margin-top: .3in; }
+.day { display: grid; grid-template-columns: .55in 1fr; align-items: center; background: #fff; border-radius: 8px; padding: .07in .1in; }
+.day .d { font-weight: 800; color: var(--accent); font-size: 9pt; }
+.day b { display: block; font-size: 10pt; }
+.day span { font-family: 'Noto Sans JP'; color: var(--sub); font-size: 8.5pt; }
+.how { margin-top: .25in; display: grid; grid-template-columns: repeat(3, 1fr); gap: .15in; }
+.how div { border-top: 3px solid var(--teal); padding-top: .06in; font-size: 9pt; }
+.how b { color: var(--teal); display: block; font-size: 10pt; }
+
+/* lesson */
+.head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--ink); padding-bottom: .08in; }
+.head .day-no { font-size: 9pt; font-weight: 800; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; }
+.head h2 { font-size: 21pt; font-weight: 800; line-height: 1.1; }
+.head .meta { font-size: 8.5pt; color: var(--sub); text-align: right; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: .2in .25in; margin-top: .2in; }
+.card { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.photo { height: 1.75in; position: relative; display: flex; align-items: center; justify-content: center; background: #cfd3d8; }
+.photo .note { position: absolute; left: 6px; bottom: 5px; font-size: 6.5pt; color: rgba(255,255,255,.95); background: rgba(0,0,0,.45); padding: 1px 6px; border-radius: 3px; }
+.photo .num { position: absolute; left: 8px; top: 8px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 800; font-size: 10pt; display: flex; align-items: center; justify-content: center; }
+.q { padding: .09in .12in .1in; }
+.q .ask { font-weight: 800; font-size: 10pt; }
+.q .choices { display: flex; gap: .1in; margin-top: .05in; font-size: 9.5pt; }
+.q .choices span::before { content: "○ "; color: var(--sub); }
+.learn { margin-top: .07in; background: var(--soft); border-radius: 6px; padding: .06in .09in; font-size: 8.6pt; color: var(--sub); }
+.learn .w { font-family: 'Noto Sans JP'; font-weight: 700; color: var(--ink); font-size: 12pt; margin-right: 6px; }
+.learn i { color: var(--accent); font-style: normal; font-weight: 700; margin-right: 6px; }
+.tip { margin-top: .2in; border-left: 4px solid var(--teal); background: #eef6f6; padding: .1in .14in; font-size: 9.2pt; border-radius: 0 6px 6px 0; }
+.tip b { color: var(--teal); }
+.answers { position: absolute; bottom: .55in; left: .55in; right: .55in; transform: rotate(180deg); font-size: 8pt; color: var(--sub); text-align: center; border-top: 1px dashed #ccc; padding-top: 4px; }
+.write { margin-top: .2in; }
+.write h3 { font-size: 10.5pt; font-weight: 800; }
+.write .row { display: grid; grid-template-columns: repeat(10, 1fr); border: 1px solid #b5b9c4; margin-top: .06in; }
+.write .row div { aspect-ratio: 1; border-right: 1px solid #d6d8de; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP'; font-size: 22pt; color: #d0d3da;
+  background: linear-gradient(#eee 0 0) center/1px 100% no-repeat, linear-gradient(#eee 0 0) center/100% 1px no-repeat; }
+.write .row div:last-child { border-right: none; }
+
+/* sign mock-ups (replace with real photos) */
+.wall { background: linear-gradient(135deg, #8d8f94, #6e7177); }
+.plate { width: 1.05in; height: 1.35in; border-radius: 6px; background: linear-gradient(135deg, #f2f3f5, #c3c7cd 55%, #e9ebee); box-shadow: 0 3px 8px rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans JP'; font-weight: 900; font-size: 46pt; color: #1b1b1b; }
+.wood { background: linear-gradient(135deg, #7a5537, #5b3d26); }
+.wsign { background: #f4eadb; border: 4px solid #3b2a1c; padding: 6px 18px; text-align: center; font-family: 'Noto Sans JP'; font-weight: 700; color: #3b2a1c; }
+.wsign .big { font-size: 40pt; color: #c2342b; line-height: 1.1; }
+.station { background: linear-gradient(180deg, #d8dce1, #b4bac2); }
+.ysign { background: #f6c400; color: #111; font-family: 'Noto Sans JP'; font-weight: 900; font-size: 34pt; padding: 6px 22px; border-radius: 4px; box-shadow: 0 3px 6px rgba(0,0,0,.3); display: flex; align-items: center; gap: 14px; }
+.nsign { background: #1f3b66; color: #fff; font-family: 'Noto Sans JP'; font-weight: 700; font-size: 32pt; padding: 8px 24px; border-radius: 4px; box-shadow: 0 3px 6px rgba(0,0,0,.3); display: flex; align-items: center; gap: 14px; }
+.pf { background: #fff; color: #111; font-family: 'Noto Sans JP'; font-weight: 900; padding: 4px 22px 8px; border-top: 14px solid #2e9e5b; box-shadow: 0 3px 6px rgba(0,0,0,.3); font-size: 22pt; }
+.pf b { font-size: 46pt; font-weight: 900; margin-right: 4px; }
+.board { background: #111; color: #ff9b2f; font-family: 'DotGothic16', 'Noto Sans JP'; padding: 10px 16px; border-radius: 4px; font-size: 17pt; line-height: 1.35; box-shadow: 0 3px 8px rgba(0,0,0,.4); }
+.board .g { color: #7cf27a; }
+</style></head><body>
+
+<!-- COVER -->
+<section class="page cover">
+  <span class="tag">Real Japan · Printable Workbook</span>
+  <h1>Read Japan<br>in 14 Days<span class="jp">日本の看板を読もう</span></h1>
+  <p class="lead">Learn the Japanese you'll actually see — on doors, train stations, menus and shop signs. Every lesson uses <b>real photos taken in Japan</b>, not textbook drawings.</p>
+  <div class="days">
+    <div class="day"><div class="d">DAY 1</div><div><b>Doors &amp; Restrooms</b><span>押・引・出口・お手洗い</span></div></div>
+    <div class="day"><div class="d">DAY 2</div><div><b>At the Station</b><span>改札・番線・東口</span></div></div>
+    <div class="day"><div class="d">DAY 3</div><div><b>Train Types</b><span>各駅停車・快速・急行</span></div></div>
+    <div class="day"><div class="d">DAY 4</div><div><b>Ticket Machines</b><span>きっぷ・チャージ・精算</span></div></div>
+    <div class="day"><div class="d">DAY 5</div><div><b>Convenience Store</b><span>温め・袋・レシート</span></div></div>
+    <div class="day"><div class="d">DAY 6</div><div><b>Ramen &amp; Udon Shops</b><span>食券・大盛・替玉</span></div></div>
+    <div class="day"><div class="d">DAY 7</div><div><b>Izakaya Menu</b><span>生ビール・焼き鳥・お通し</span></div></div>
+    <div class="day"><div class="d">DAY 8</div><div><b>Prices &amp; Numbers</b><span>円・税込・割引</span></div></div>
+    <div class="day"><div class="d">DAY 9</div><div><b>Open or Closed?</b><span>営業中・準備中・定休日</span></div></div>
+    <div class="day"><div class="d">DAY 10</div><div><b>Street Signs</b><span>止まれ・禁煙・駐輪禁止</span></div></div>
+    <div class="day"><div class="d">DAY 11</div><div><b>Hotels &amp; Onsen</b><span>男湯・女湯・チェックイン</span></div></div>
+    <div class="day"><div class="d">DAY 12</div><div><b>Shrines &amp; Temples</b><span>参道・おみくじ・御朱印</span></div></div>
+    <div class="day"><div class="d">DAY 13</div><div><b>Help &amp; Emergencies</b><span>非常口・交番・病院</span></div></div>
+    <div class="day"><div class="d">DAY 14</div><div><b>Final Photo Quiz</b><span>50 real signs</span></div></div>
+  </div>
+  <div class="how">
+    <div><b>1 · Look</b>Study the photo. What do you think it says?</div>
+    <div><b>2 · Guess</b>Circle an answer. The key is printed upside-down.</div>
+    <div><b>3 · Write</b>Trace the key word 10 times to remember it.</div>
+  </div>
+  <div class="foot"><span>© Your Shop Name · Photos © Your Shop Name, taken in Japan</span><span>For personal &amp; classroom use</span></div>
+</section>
+
+<!-- DAY 1 -->
+<section class="page">
+  <div class="head"><div><div class="day-no">Day 1</div><h2>Doors &amp; Restrooms</h2></div><div class="meta">4 signs · 10 minutes<br>You'll see these within 1 hour of landing</div></div>
+  <div class="grid">
+    <div class="card"><div class="photo wall"><div class="num">1</div><div class="plate">押</div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">You see this on a door. What do you do?</div><div class="choices"><span>Push</span><span>Pull</span><span>Slide</span></div>
+      <div class="learn"><span class="w">押</span><i>osu</i>push — look for it on shop & office doors</div></div></div>
+    <div class="card"><div class="photo wall"><div class="num">2</div><div class="plate">引</div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">And this one?</div><div class="choices"><span>Push</span><span>Pull</span><span>Locked</span></div>
+      <div class="learn"><span class="w">引</span><i>hiku</i>pull — the bow-shape 弓 is a hint: pull the string</div></div></div>
+    <div class="card"><div class="photo wood"><div class="num">3</div><div class="wsign"><div style="font-size:12pt">お手洗い</div><div class="big">女</div></div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">Which restroom is this?</div><div class="choices"><span>Men</span><span>Women</span><span>Family</span></div>
+      <div class="learn"><span class="w">女</span><i>onna</i>woman · <span class="w" style="font-size:10pt">男</span><i>otoko</i>man · お手洗い = restroom</div></div></div>
+    <div class="card"><div class="photo station"><div class="num">4</div><div class="ysign">出口 <span style="font-size:24pt">→</span></div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">Where does this arrow take you?</div><div class="choices"><span>Entrance</span><span>Exit</span><span>Toilet</span></div>
+      <div class="learn"><span class="w">出口</span><i>deguchi</i>exit · 入口 <i>iriguchi</i> = entrance</div></div></div>
+  </div>
+  <div class="write"><h3>Write it: 出口 (exit)</h3><div class="row"><div>出</div><div>口</div><div>出</div><div>口</div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+  <div class="tip"><b>Local tip from Japan:</b> Many doors in Japan are automatic — but not all! If a glass door doesn't open, look for a small button marked <b>「押してください」</b> (please press) or the 押 / 引 plate.</div>
+  <div class="answers">Answers: 1 Push · 2 Pull · 3 Women · 4 Exit</div>
+  <div class="foot"><span>© Your Shop Name</span><span>Day 1 / 14</span></div>
+</section>
+
+<!-- DAY 2 -->
+<section class="page">
+  <div class="head"><div><div class="day-no">Day 2</div><h2>At the Station</h2></div><div class="meta">4 signs · 10 minutes<br>You'll use these signs every single day</div></div>
+  <div class="grid">
+    <div class="card"><div class="photo station"><div class="num">1</div><div class="nsign">改札 <span style="font-size:24pt">↑</span></div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">Follow this to find the…</div><div class="choices"><span>Ticket gates</span><span>Lockers</span><span>Toilet</span></div>
+      <div class="learn"><span class="w">改札</span><i>kaisatsu</i>ticket gates — tap your IC card here</div></div></div>
+    <div class="card"><div class="photo station"><div class="num">2</div><div class="pf"><b>3</b>番線</div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">What is this sign telling you?</div><div class="choices"><span>Exit 3</span><span>Platform 3</span><span>3 minutes</span></div>
+      <div class="learn"><span class="w">番線</span><i>bansen</i>platform (track) number</div></div></div>
+    <div class="card"><div class="photo" style="background:#2b2d33"><div class="num">3</div><div class="board">各駅停車 <span class="g">渋谷</span> 10:15<br>快速　　 <span class="g">横浜</span> 10:18</div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">You want a train that stops at <u>every</u> station. Which time?</div><div class="choices"><span>10:15</span><span>10:18</span></div>
+      <div class="learn"><span class="w">各駅停車</span><i>kakueki teisha</i>local (all stops) · 快速 <i>kaisoku</i> = rapid</div></div></div>
+    <div class="card"><div class="photo station"><div class="num">4</div><div class="ysign">東口 <span style="font-size:24pt">←</span></div><div class="note">Sample illustration · replace with your photo</div></div>
+      <div class="q"><div class="ask">Your friend says "meet at the East Exit." Is this it?</div><div class="choices"><span>Yes</span><span>No</span></div>
+      <div class="learn"><span class="w">東口</span><i>higashi-guchi</i>east exit · 西 west · 南 south · 北 north</div></div></div>
+  </div>
+  <div class="write"><h3>Write it: 東口 (east exit)</h3><div class="row"><div>東</div><div>口</div><div>東</div><div>口</div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+  <div class="tip"><b>Local tip from Japan:</b> Big stations have many exits, and they can be 10 minutes apart. Always ask which exit — <b>「何口ですか？」</b> <i>nani-guchi desu ka?</i> — before agreeing on a meeting place.</div>
+  <div class="answers">Answers: 1 Ticket gates · 2 Platform 3 · 3 10:15 · 4 Yes</div>
+  <div class="foot"><span>© Your Shop Name</span><span>Day 2 / 14</span></div>
+</section>
+</body></html>

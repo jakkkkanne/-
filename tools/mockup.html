@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Listing Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Nunito:wght@700&display=swap" rel="stylesheet">
+<style>
+/* Etsy listing thumbnail 2000x1600 (5:4). ?img=a.png,b.png&label=...&badge=... */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+section.page { width: 2000px; height: 1600px; position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #e9e2d6 0%, #e3dacb 72%, #b99a74 72%, #a8875f 100%); font-family: 'Nunito', sans-serif; }
+.light { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.55), transparent 60%); }
+.frames { position: absolute; top: 170px; left: 0; right: 0; display: flex; justify-content: center; gap: 60px; }
+.frame { background: #2a221c; padding: 26px; box-shadow: 0 40px 60px rgba(0,0,0,.28), 0 8px 14px rgba(0,0,0,.2); }
+.frame .mat { background: #fbf8f2; padding: 46px; }
+.frame img { display: block; }
+.plant { position: absolute; bottom: 300px; right: 150px; width: 170px; height: 330px; }
+.label { position: absolute; left: 70px; bottom: 60px; background: rgba(29,26,23,.88); color: #f6f0e4; padding: 26px 42px; border-radius: 6px; }
+.label b { font-family: 'Cormorant Garamond', serif; font-size: 64px; display: block; line-height: 1.05; }
+.label span { font-size: 30px; letter-spacing: 3px; text-transform: uppercase; opacity: .85; }
+.badge { position: absolute; right: 70px; bottom: 70px; background: #b8352b; color: #fff; width: 220px; height: 220px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; text-align: center; font-size: 34px; line-height: 1.15; }
+</style></head><body>
+<section class="page">
+  <div class="light"></div>
+  <div class="frames" id="frames"></div>
+  <svg class="plant" viewBox="0 0 170 330"><path d="M85 330 V120" stroke="#3f5a3a" stroke-width="5"/>
+    <g fill="#4f7246"><ellipse cx="60" cy="110" rx="22" ry="60" transform="rotate(-25 60 110)"/><ellipse cx="112" cy="95" rx="22" ry="62" transform="rotate(22 112 95)"/>
+    <ellipse cx="85" cy="70" rx="20" ry="66"/><ellipse cx="45" cy="190" rx="18" ry="50" transform="rotate(-40 45 190)"/><ellipse cx="128" cy="180" rx="18" ry="50" transform="rotate(40 128 180)"/></g>
+    <path d="M40 260 h90 l-12 70 h-66z" fill="#d9cbb6"/></svg>
+  <div class="label" id="label"></div>
+  <div class="badge" id="badge"></div>
+</section>
+<script>
+const q = new URLSearchParams(location.search);
+const imgs = (q.get('img') || '').split(',').filter(Boolean);
+const h = imgs.length === 1 ? 1000 : imgs.length === 2 ? 820 : 700;
+document.getElementById('frames').innerHTML = imgs.map(src => `<div class="frame"><div class="mat"><img src="${src}" style="height:${h - 144}px"></div></div>`).join('');
+const [title, sub] = (q.get('label') || '|').split('|');
+document.getElementById('label').innerHTML = `<b>${title}</b><span>${sub}</span>`;
+const badge = q.get('badge'); const b = document.getElementById('badge');
+if (badge) b.innerHTML = badge; else b.remove();
+</script>
+</body></html>

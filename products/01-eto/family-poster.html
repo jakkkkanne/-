@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Custom Family Eto Poster</title>
+<link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Noto+Serif+JP:wght@400;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="eto-style.css">
+</head><body>
+<section class="page">
+  <div class="fam-head"><div class="jp">家族の干支</div><h1 id="fname"></h1><p>Our Japanese Zodiac · Eto</p></div>
+  <div class="fam-grid" id="grid"></div>
+  <div class="fam-foot" id="foot"></div>
+</section>
+<script src="eto-data.js"></script>
+<script>
+// Order data comes from the query string:
+//   ?family=Johnson&m=Charlie:1981,Emma:1983,Lily:2013,Max:2016&note=Est.%202008
+const q = new URLSearchParams(location.search);
+const family = q.get('family') || 'Johnson';
+const members = (q.get('m') || 'Charlie:1981,Emma:1983,Lily:2013,Max:2016')
+  .split(',').map(s => { const [name, year] = s.split(':'); return { name: name.trim(), year: +year }; });
+document.getElementById('fname').textContent = 'The ' + family + ' Family';
+document.getElementById('foot').textContent = q.get('note') || 'In Japan, the zodiac year begins on January 1st';
+
+const n = members.length, cols = n <= 2 ? n : n <= 4 ? 2 : 3, rows = Math.ceil(n / cols);
+const grid = document.getElementById('grid');
+grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+const big = rows === 1 ? 62 : rows === 2 ? 42 : 30;   // kanji size in mm
+grid.innerHTML = members.map(m => { const e = etoOfYear(m.year); return `
+  <div class="member">
+    <div class="k" style="font-size:${big}mm">${e.k}</div>
+    <div class="n" style="font-size:${big * .17}mm">${m.name}</div>
+    <div class="a" style="font-size:${big * .085}mm">${e.en} · ${e.romaji}</div>
+    <div class="y" style="font-size:${big * .09}mm">Born ${m.year}</div>
+  </div>`; }).join('');
+</script>
+</body></html>
